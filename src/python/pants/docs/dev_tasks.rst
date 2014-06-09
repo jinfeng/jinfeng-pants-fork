@@ -151,7 +151,7 @@ Tasks must be installed before they are available for use.
 Fortunately this is a simple process. They are installed
 in ``goal.py`` as follows: ::
 
-   from pants.tasks.pagerank import PageRank
+   from pants.backend.core.tasks.pagerank import PageRank
    goal(name='pagerank', action=PageRank).install().with_description('PageRank the given targets.')
 
 
@@ -203,8 +203,8 @@ example, including exemplary configuration and error handling (which your task w
 right :)  ::
 
    class Scalastyle(NailgunTask):
-     def __init__(self, context):
-       NailgunTask.__init__(self, context)
+     def __init__(self, context, workdir):
+       super(Scalastyle, self).__init__(context, workdir)
        self._scalastyle_config = self.context.config.get_required('scalastyle, 'config')
        self._scalastyle_bootstrap_key = 'scalastyle'
        self.register_jvm_tool(self._scalastyle_bootstrap_key, [':scalastyle'])

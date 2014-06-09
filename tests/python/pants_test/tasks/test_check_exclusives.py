@@ -4,48 +4,52 @@
 from __future__ import (nested_scopes, generators, division, absolute_import, with_statement,
                         print_function, unicode_literals)
 
-from pants.base.config import Config
-from pants.goal import Context
-from pants.tasks import TaskError
-from pants.tasks.check_exclusives import CheckExclusives
-from pants_test.testutils.base_mock_target_test import BaseMockTargetTest
-from pants_test.testutils.mock_target import MockTarget
+import shutil
+import tempfile
+
+from pants.backend.core.tasks.check_exclusives import CheckExclusives
+from pants.base.exceptions import TaskError
+
+from pants_test.base_test import BaseTest
 
 
-class CheckExclusivesTest(BaseMockTargetTest):
+class CheckExclusivesTest(BaseTest):
   """Test of the CheckExclusives task."""
 
-  @classmethod
-  def setUpClass(cls):
-     cls.config = Config.load()
+  def setUp(self):
+    super(CheckExclusivesTest, self).setUp()
+    self.workdir = tempfile.mkdtemp()
+
+  def tearDown(self):
+    shutil.rmtree(self.workdir, ignore_errors=True)
+    super(CheckExclusivesTest, self).tearDown()
 
   def test_check_exclusives(self):
-    a = MockTarget('a', exclusives={'a': '1', 'b': '1'})
-    b = MockTarget('b', exclusives={'a': '1'})
-    c = MockTarget('c', exclusives={'a': '2'})
-    d = MockTarget('d', dependencies=[a, b])
-    e = MockTarget('e', dependencies=[a, c], exclusives={'c': '1'})
+    a = self.make_target(':a', exclusives={'a': '1', 'b': '1'})
+    b = self.make_target(':b', exclusives={'a': '1'})
+    c = self.make_target(':c', exclusives={'a': '2'})
+    d = self.make_target(':d', dependencies=[a, b])
+    e = self.make_target(':e', dependencies=[a, c], exclusives={'c': '1'})
 
-    context = Context(CheckExclusivesTest.config, options={}, run_tracker=None, target_roots=[d, e])
-    check_exclusives_task = CheckExclusives(context, signal_error=True)
+    context = self.context(target_roots=[d, e])
+    check_exclusives_task = CheckExclusives(context, self.workdir, signal_error=True)
     try:
-      check_exclusives_task.execute([d, e])
+      check_exclusives_task.execute()
       self.fail("Expected a conflicting exclusives exception to be thrown.")
     except TaskError:
       pass
 
   def test_classpath_compatibility(self):
     # test the compatibility checks for different exclusive groups.
-    a = MockTarget('a', exclusives={'a': '1', 'b': '1'})
-    b = MockTarget('b', exclusives={'a': '1', 'b': '<none>'})
-    c = MockTarget('c', exclusives={'a': '2', 'b': '2'})
-    d = MockTarget('d')
+    a = self.make_target(':a', exclusives={'a': '1', 'b': '1'})
+    b = self.make_target(':b', exclusives={'a': '1', 'b': '<none>'})
+    c = self.make_target(':c', exclusives={'a': '2', 'b': '2'})
+    d = self.make_target(':d')
 
-    context = Context(CheckExclusivesTest.config, options={}, run_tracker=None,
-                      target_roots=[a, b, c, d])
+    context = self.context(target_roots=[a, b, c, d])
     context.products.require_data('exclusives_groups')
-    check_exclusives_task = CheckExclusives(context, signal_error=True)
-    check_exclusives_task.execute([a, b, c, d])
+    check_exclusives_task = CheckExclusives(context, self.workdir, signal_error=True)
+    check_exclusives_task.execute()
     egroups = context.products.get_data('exclusives_groups')
     # Expected compatibility:
     # a is compatible with nothing but itself.
@@ -74,16 +78,15 @@ class CheckExclusivesTest(BaseMockTargetTest):
 
   def test_classpath_updates(self):
     # Check that exclusive groups classpaths accumulate properly.
-    a = MockTarget('a', exclusives={'a': '1', 'b': '1'})
-    b = MockTarget('b', exclusives={'a': '1', 'b': '<none>'})
-    c = MockTarget('c', exclusives={'a': '2', 'b': '2'})
-    d = MockTarget('d')
+    a = self.make_target(':a', exclusives={'a': '1', 'b': '1'})
+    b = self.make_target(':b', exclusives={'a': '1', 'b': '<none>'})
+    c = self.make_target(':c', exclusives={'a': '2', 'b': '2'})
+    d = self.make_target(':d')
 
-    context = Context(CheckExclusivesTest.config, options={}, run_tracker=None,
-                      target_roots=[a, b, c, d])
+    context = self.context(target_roots=[a, b, c, d])
     context.products.require_data('exclusives_groups')
-    check_exclusives_task = CheckExclusives(context, signal_error=True)
-    check_exclusives_task.execute([a, b, c, d])
+    check_exclusives_task = CheckExclusives(context, self.workdir, signal_error=True)
+    check_exclusives_task.execute()
     egroups = context.products.get_data('exclusives_groups')
 
     egroups.set_base_classpath_for_group("a=1,b=1", ["a1", "b1"])

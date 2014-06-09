@@ -32,9 +32,8 @@ goals can be especially helpful:
 
 ``list`` Did I define the targets I meant to? ::
 
-    $ ./pants goal list src/java/com/twitter/common/examples/pingpong:
-    src/java/com/twitter/common/examples/pingpong/BUILD:pingpong-lib
-    src/java/com/twitter/common/examples/pingpong/BUILD:pingpong
+    $ ./pants goal list src/java/com/pants/examples/hello/greet
+    src/java/com/pants/examples/hello/greet/BUILD:greet
 
 ``list ::`` List **every** target to find out:
 Did a change in one ``BUILD`` file break others? ::
@@ -49,22 +48,25 @@ Did a change in one ``BUILD`` file break others? ::
     $ # Instead of listing all targets, a strack trace. We found a problem
 
 ``depmap`` Do I pull in the dependencies I expect?
-(JVM languages only) (This lists dependencies from your source; it doesn't catch
-dependencies pulled in from 3rdparty ``.jars``)::
+(JVM languages only) This lists dependencies from your source; it doesn't catch
+dependencies pulled in from 3rdparty ``.jars``. For example, here it shows
+that ``main-bin`` depends on the 3rdparty ``log4j`` jar, but not that
+``log4j`` depends on ``javax.mail``::
 
-    $ ./pants goal depmap src/java/com/twitter/common/examples/pingpong:pingpong-lib
-    internal-src.java.com.twitter.common.examples.pingpong.pingpong-lib
-      internal-src.java.com.twitter.common.application.application
-        internal-src.java.com.twitter.common.application.modules.applauncher
-          internal-src.java.com.twitter.common.application.action
-            ...more output...
+    $ ./pants goal depmap src/java/com/pants/examples/hello/main
+    internal-src.java.com.pants.examples.hello.main.main
+      internal-src.java.com.pants.examples.hello.main.main-bin
+        internal-src.java.com.pants.examples.hello.greet.greet
+        log4j-log4j-1.2.15
 
 ``filedeps`` What source files do I depend on? ::
 
-    $ ./pants goal filedeps src/java/com/twitter/common/examples/pingpong:pingpong-lib
-    ~archie/pantsbuild/src/java/com/twitter/common/util/Stat.java
-    ~archie/pantsbuild/src/java/com/twitter/common/net/http/handlers/pprof/ContentionProfileHandler.java
-    ...more output...
+    $ ./pants goal filedeps src/java/com/pants/examples/hello/main
+    ~archie/workspace/pants/src/java/com/pants/examples/hello/greet/BUILD
+    ~archie/workspace/pants/src/java/com/pants/examples/hello/greet/Greeting.java
+    ~archie/workspace/pants/src/java/com/pants/examples/hello/main/BUILD
+    ~archie/workspace/pants/src/java/com/pants/examples/hello/main/config/log4j.properties
+    ~archie/workspace/pants/src/java/com/pants/examples/hello/main/HelloMain.java
 
 .. _usage-default-target:
 
@@ -110,6 +112,48 @@ same target::
 By providing a target with the default name, you simplify interacting with your target from the
 command-line. This gives users a better experience using your library.
 In BUILD files, dependencies are less verbose, which improves readability.
+
+The 1:1:1 Rule
+**************
+
+Your code's organization, including ``BUILD`` target configuration, makes
+building easier or harder. Some folks summarize clear and scalable code
+layout choice
+with the **1:1:1** rule of thumb:
+
+* **1 Folder**
+* **1 Package**
+* **1 BUILD Target**
+
+If there's a set of code that usually goes together, it makes sense for it to
+be in one folder using one package namespace.
+The folder should have a ``BUILD`` file with one target to build that set of
+code.
+
+If there's a subset of code that *doesn't* usually go together with the rest
+of the code in some directory/target, it makes sense to move that code out
+into another folder and its own package namespace.
+The new folder should have its own ``BUILD`` file containing a target to build
+that code.
+
+Code belongs at the "leaves" of your directory tree. E.g., if
+``.../foo/Foo.java`` exists, you don't want to create ``.../foo/bar/Bar.java``
+in a subdirectory. (Or if you do, then you want to move the other foo
+code to ``../foo/justfoonotbar/Foo.java`` or somesuch.) This keeps all the code
+for a package in 1 Folder, 1 BUILD target.
+
+**1:1:1**  is a "rule of thumb", not a law.
+If your code breaks this rule, it will still build.
+**1:1:1** tends to make your code easier to work with.
+
+If you're new to Pants, you might feel overwhelmed by all these ``BUILD``
+files; you might think it's simpler to have fewer of them: maybe just one
+``BUILD`` file in the "top folder" for a project that builds code from
+several directories. But this "target coarseness" can waste your time:
+you have a huge target that depends on everything that your source depends on.
+If you divide your code into smaller, coherent targets, each of those targets
+has only a subset of those dependencies.
+
 
 .. _usage-avoid-rglobs:
 
@@ -298,10 +342,10 @@ targets and register those targets in a Pants data structure.
 Though your repo might contain many ``BUILD`` files, Pants might not execute all
 of them. If you invoke::
 
-    ./pants goal test tests/java/com/twitter/common/examples/pingpong:pingpong
+    ./pants goal test tests/java/com/pants/examples/hello/greet:greet
 
 Pants executes the source tree's top-level ``BUILD`` file (executed on every Pants run) and
-``tests/java/com/twitter/common/examples/pingpong/BUILD``. The ``pingpong`` target
+``tests/java/com/pants/examples/hello/greet/BUILD``. The ``greet`` target
 depends on targets from other ``BUILD`` files, so Pants executes those ``BUILD``
 files, too; it iterates over the dependency tree, executing ``BUILD`` files as it
 goes. It does *not* execute ``BUILD`` files that don't contain targets in that

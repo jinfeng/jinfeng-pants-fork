@@ -4,19 +4,18 @@
 python_library(
   name='_pants_transitional_publishable_library_',
   sources=rglobs('*.py'),
-  resources=[
-    globs('java/distribution/*.class'),
-    rglobs('reporting/assets/*') + globs('reporting/templates/*.mustache'),
-    globs('tasks/builddictionary/*.mustache'),
-    globs('tasks/templates/eclipse/*.mustache'),
-    globs('tasks/templates/idea/*.mustache'),
-    globs('tasks/templates/ivy_resolve/*.mustache'),
-    globs('tasks/templates/jar_publish/*.mustache'),
-  ],
+  resources=(
+    globs('java/distribution/*.class') +
+    rglobs('reporting/assets/*') + globs('reporting/templates/*.mustache') +
+    globs('tasks/builddictionary/*.mustache') +
+    globs('jvm/tasks/templates/eclipse/*.mustache') +
+    globs('jvm/tasks/templates/idea/*.mustache') +
+    globs('jvm/tasks/templates/ivy_resolve/*.mustache') +
+    globs('jvm/tasks/templates/jar_publish/*.mustache')
+  ),
   dependencies=[
     pants('3rdparty/python:ansicolors'),
     pants('3rdparty/python:coverage'),
-    pants('3rdparty/python:elementtree'),
     pants('3rdparty/python:Markdown'),
     pants('3rdparty/python:psutil'),
     pants('3rdparty/python:Pygments'),
@@ -36,7 +35,6 @@ python_library(
     pants('3rdparty/python/twitter/commons:twitter.common.process'),
     pants('3rdparty/python/twitter/commons:twitter.common.python'),
     pants('3rdparty/python/twitter/commons:twitter.common.quantity'),
-    pants('3rdparty/python/twitter/commons:twitter.common.rwbuf'),
     pants('3rdparty/python/twitter/commons:twitter.common.threading'),
     pants('3rdparty/python/twitter/commons:twitter.common.util'),
   ]

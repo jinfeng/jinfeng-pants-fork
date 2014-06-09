@@ -7,7 +7,9 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
 from twitter.common.collections import OrderedSet
 
 from pants.base.build_file import BuildFile
+from pants.base.config import Config
 from pants.base.target import Target
+from pants.base.workunit import WorkUnit
 
 
 class Command(object):
@@ -45,13 +47,37 @@ class Command(object):
   def serialized(cls):
     return False
 
-  def __init__(self, run_tracker, root_dir, parser, args):
+  def __init__(self,
+               run_tracker,
+               root_dir,
+               parser,
+               args,
+               build_file_parser,
+               build_graph):
     """run_tracker: The (already opened) RunTracker to track this run with
     root_dir: The root directory of the pants workspace
     parser: an OptionParser
     args: the subcommand arguments to parse"""
     self.run_tracker = run_tracker
     self.root_dir = root_dir
+    self.build_file_parser = build_file_parser
+    self.build_graph = build_graph
+
+    config = Config.load()
+
+    with self.run_tracker.new_workunit(name='bootstrap', labels=[WorkUnit.SETUP]):
+      # construct base parameters to be filled in for BuildGraph
+      for path in config.getlist('goals', 'bootstrap_buildfiles', default=[]):
+        # try:
+        build_file = BuildFile(root_dir=self.root_dir, relpath=path)
+        self.build_file_parser.parse_build_file_family(build_file)
+        # except (TypeError, ImportError):
+        #   error(path, include_traceback=True)
+        # except (IOError, SyntaxError):
+        #   error(path)
+
+    # Now that we've parsed the bootstrap BUILD files, and know about the SCM system.
+    self.run_tracker.run_info.add_scm_info()
 
     # Override the OptionParser's error with more useful output
     def error(message=None, show_help=True):

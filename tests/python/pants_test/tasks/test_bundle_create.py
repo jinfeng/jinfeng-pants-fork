@@ -6,7 +6,7 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
 
 import unittest
 
-from pants.tasks.bundle_create import BundleCreate
+from pants.backend.jvm.tasks.bundle_create import BundleCreate
 from pants_test.base.context_utils import create_context
 
 
@@ -20,12 +20,10 @@ class BundleCreateTest(unittest.TestCase):
 
   def test_bundle_create_init(self):
     options = {
-               'jvm_binary_create_outdir': None,
-               'binary_create_compressed': None,
-               'binary_create_zip64': None,
-               'jvm_binary_create_deployjar': None,
+               'bundle_create_deployjar': None,
                'bundle_create_prefix': None,
                'bundle_create_archive': None
                }
-    bundle_create = BundleCreate(create_context(config=sample_ini_test_1, options=options))
-    self.assertEquals(bundle_create.outdir, '/tmp/dist')
+    bundle_create = BundleCreate(create_context(config=sample_ini_test_1, options=options),
+                                 '/tmp/workdir')
+    self.assertEquals(bundle_create._outdir, '/tmp/dist')

@@ -169,7 +169,7 @@ class NailgunExecutor(Executor):
       def cmd(this):
         return ' '.join(command)
 
-      def run(this, stdout=sys.stdout, stderr=sys.stderr):
+      def run(this, stdout=None, stderr=None):
         nailgun = self._get_nailgun_client(jvm_options, classpath, stdout, stderr)
         try:
           log.debug('Executing via %s: %s' % (nailgun, this.cmd))
@@ -258,7 +258,7 @@ class NailgunExecutor(Executor):
       time.sleep(0.1)
 
   def _create_ngclient(self, port, stdout, stderr):
-    return NailgunClient(port=port, ins=self._ins, out=stdout, err=stderr, work_dir=get_buildroot())
+    return NailgunClient(port=port, ins=self._ins, out=stdout, err=stderr, workdir=get_buildroot())
 
   def _spawn_nailgun_server(self, fingerprint, jvm_args, classpath, stdout, stderr):
     log.debug('No ng server found with fingerprint %s, spawning...' % fingerprint)

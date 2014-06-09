@@ -36,32 +36,21 @@ python_library(
 )
 
 python_library(
-  name = 'build_file_aliases',
-  sources = ['build_file_aliases.py'],
+  name = 'build_file_parser',
+  sources = ['build_file_parser.py'],
   dependencies = [
-    pants('src/python/pants/targets:all'),  # XXX(fixme)
+    pants('3rdparty/python/twitter/commons:twitter.common.python'),
+    pants(':build_file'),
+    pants(':address'),
   ]
 )
 
 python_library(
-  name = 'build_file_context',  # XXX(fixme)
-  sources = ['build_file_context.py'],
+  name = 'build_graph',
+  sources = ['build_graph.py'],
   dependencies = [
-    pants(':build_environment'),
-    pants(':build_file_aliases'),
-    pants(':build_file_helpers'),
-    pants(':config'),
-    pants('src/python/pants/goal'),
-    pants('src/python/pants/targets:common'),
-    pants('src/python/pants/tasks:common'),
-  ]
-)
-
-python_library(
-  name = 'build_file_helpers',  # XXX(fixme)
-  sources = ['build_file_helpers.py'],
-  dependencies = [
-    pants('src/python/pants/targets:all'),  # XXX(fixme)
+    pants('3rdparty/python/twitter/commons:twitter.common.collections'),
+    pants(':address'),
   ]
 )
 
@@ -70,9 +59,11 @@ python_library(
   sources = ['build_invalidator.py'],
   dependencies = [
     pants(':hash_utils'),
-    pants(':target'),
+    pants(':target'), # XXX(fixme)
     pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
     pants('3rdparty/python/twitter/commons:twitter.common.lang'),
+    pants('3rdparty/python/twitter/commons:twitter.common.python'),
+    pants('3rdparty/python/twitter/commons:twitter.common.log'),
     pants('src/python/pants/fs'),
   ]
 )
@@ -91,10 +82,28 @@ python_library(
 )
 
 python_library(
+  name = 'cache_manager',
+  sources = ['cache_manager.py'],
+  dependencies = [
+    pants(':build_graph'),
+    pants(':build_invalidator'),
+    pants(':target'),
+  ],
+)
+
+python_library(
   name = 'config',
   sources = ['config.py'],
   dependencies = [
     pants(':build_environment'),
+  ]
+)
+
+python_library(
+  name = 'dev_backend_loader',
+  sources = ['dev_backend_loader.py'],
+  dependencies = [
+    pants('3rdparty/python/twitter/commons:twitter.common.collections'),
   ]
 )
 
@@ -104,6 +113,19 @@ python_library(
   dependencies = [
     pants(':abbreviate_target_ids'),
   ]
+)
+
+python_library(
+  name = 'exceptions',
+  sources = ['exceptions.py'],
+  dependencies = [
+    pants(':build_manual'),
+  ]
+)
+
+python_library(
+  name = 'fingerprint_strategy',
+  sources = ['fingerprint_strategy.py'],
 )
 
 python_library(
@@ -129,15 +151,12 @@ python_library(
 )
 
 python_library(
-  name = 'parse_context',
-  sources = ['parse_context.py'],
+  name = 'payload',
+  sources = ['payload.py'],
   dependencies = [
-    pants(':build_environment'),
-    pants(':build_file'),
-    pants(':build_file_context'),
-    pants(':config'),
-    pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
+    pants('3rdparty/python/twitter/commons:twitter.common.collections'),
     pants('3rdparty/python/twitter/commons:twitter.common.lang'),
+    pants(':build_environment'),
   ]
 )
 
@@ -166,22 +185,35 @@ python_library(
 )
 
 python_library(
-  name = 'target',
-  sources = ['target.py'],
+  name = 'spec_parser',
+  sources = ['spec_parser.py'],
   dependencies = [
     pants(':address'),
-    pants(':build_manual'),
-    pants(':hash_utils'),
-    pants(':parse_context'),
-    pants('3rdparty/python/twitter/commons:twitter.common.collections'),
-    pants('3rdparty/python/twitter/commons:twitter.common.lang'),
+    pants(':build_file'),
   ],
 )
 
 python_library(
-  name = 'timer',
-  sources = ['timer.py'],
+  name = 'source_root',
+  sources = ['source_root.py'],
   dependencies = [
+    pants(':build_environment'),
+    pants(':exceptions'),
+    pants('3rdparty/python/twitter/commons:twitter.common.collections'),
+  ],
+)
+
+python_library(
+  name = 'target',
+  sources = ['target.py'],
+  dependencies = [
+    pants(':address'),
+    pants(':build_environment'),
+    pants(':build_manual'),
+    pants(':fingerprint_strategy'),
+    pants(':hash_utils'),
+    pants(':source_root'),
+    pants('3rdparty/python/twitter/commons:twitter.common.collections'),
     pants('3rdparty/python/twitter/commons:twitter.common.lang'),
   ],
 )
@@ -190,7 +222,7 @@ python_library(
   name = 'worker_pool',
   sources = ['worker_pool.py'],
   dependencies = [
-    pants('src/python/pants/reporting'), # XXX(fixme)
+    pants('src/python/pants/reporting:report'), # TODO(pl): Bust this out
   ],
 )
 
@@ -199,6 +231,6 @@ python_library(
   sources = ['workunit.py'],
   dependencies = [
     pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
-    pants('3rdparty/python/twitter/commons:twitter.common.rwbuf'), # XXX(fixme)
+    pants('src/python/pants/rwbuf'),
   ],
 )

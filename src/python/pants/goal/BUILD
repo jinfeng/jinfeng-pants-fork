@@ -11,7 +11,7 @@ python_library(
     pants(':phase'),
     pants(':run_tracker'),
     pants('src/python/pants/base:build_manual'),
-    pants('src/python/pants/tasks:task'),
+    pants('src/python/pants/backend/core/tasks:task'),
   ],
 )
 
@@ -41,18 +41,26 @@ python_library(
     pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
     pants('3rdparty/python/twitter/commons:twitter.common.process'),
     pants('src/python/pants/base:build_environment'),
-    pants('src/python/pants/base:parse_context'),
-    pants('src/python/pants/base:target'),
+    pants('src/python/pants/base:target'), # XXX(fixme)
     pants('src/python/pants/base:workunit'),
     pants('src/python/pants/java:distribution'),  # XXX(fixme)
     pants('src/python/pants/reporting'),
-    pants('src/python/pants/targets:all'),  # XXX(fixme)
   ],
 )
 
 python_library(
   name = 'error',
   sources = ['error.py'],
+)
+
+python_library(
+  name = 'help',
+  sources = ['help.py'],
+  dependencies = [
+    ':option_helpers',
+    ':phase',
+    'src/python/pants/version',
+  ],
 )
 
 python_library(
@@ -71,10 +79,19 @@ python_library(
 )
 
 python_library(
+  name = 'option_helpers',
+  sources = ['option_helpers.py'],
+  dependencies = [
+    pants('src/python/pants/base:config'),
+  ],
+)
+
+python_library(
   name = 'phase',
   sources = ['phase.py'],
   dependencies = [
     pants(':error'),
+    pants(':option_helpers'),
     pants('src/python/pants/base:build_manual'),
   ],
 )
@@ -96,7 +113,8 @@ python_library(
     pants('src/python/pants/base:run_info'),
     pants('src/python/pants/base:worker_pool'),
     pants('src/python/pants/base:workunit'),
-    pants('src/python/pants/reporting'),
+    pants('src/python/pants/reporting'), # XXX(fixme)
     pants('src/python/pants/base:config'),
   ],
 )
+

@@ -7,10 +7,13 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
 import os
 from textwrap import dedent
 
+from pants.backend.core.targets.dependencies import Dependencies
+from pants.backend.core.tasks.listtargets import ListTargets
 from pants.base.target import Target
-from pants.tasks.listtargets import ListTargets
+from pants.backend.jvm.targets.artifact import Artifact
+from pants.backend.jvm.targets.java_library import JavaLibrary
+from pants.backend.jvm.targets.repository import Repository
 from pants_test.tasks.test_base import ConsoleTaskTest
-
 
 class BaseListTargetsTest(ConsoleTaskTest):
   @classmethod
@@ -26,9 +29,22 @@ class ListTargetsTestEmpty(BaseListTargetsTest):
 
 
 class ListTargetsTest(BaseListTargetsTest):
-  @classmethod
-  def setUpClass(cls):
-    super(ListTargetsTest, cls).setUpClass()
+  @property
+  def alias_groups(self):
+    return {
+      'target_aliases': {
+        'dependencies': Dependencies,
+        'java_library': JavaLibrary,
+        'repo': Repository,
+      },
+      'exposed_objects': {
+        'pants': lambda x: x,
+        'artifact': Artifact,
+      },
+    }
+
+  def setUp(self):
+    super(ListTargetsTest, self).setUp()
 
     # Setup a BUILD tree for various list tests
 
@@ -39,7 +55,7 @@ class ListTargetsTest(BaseListTargetsTest):
           push_db='/tmp/publish.properties'
         )
         ''').strip()
-    cls.create_target('repos', repo_target)
+    self.add_to_build_file('repos', repo_target)
 
     class Lib(object):
       def __init__(self, name, provides=False):
@@ -53,17 +69,17 @@ class ListTargetsTest(BaseListTargetsTest):
             ''' % name).strip() if provides else 'None'
 
     def create_library(path, *libs):
-      libs = libs or [Lib(os.path.basename(os.path.dirname(cls.build_path(path))))]
+      libs = libs or [Lib(os.path.basename(os.path.dirname(self.build_path(path))))]
       for lib in libs:
         target = "java_library(name='%s', provides=%s, sources=[])\n" % (lib.name, lib.provides)
-        cls.create_target(path, target)
+        self.add_to_build_file(path, target)
 
     create_library('a')
     create_library('a/b', Lib('b', provides=True))
     create_library('a/b/c', Lib('c'), Lib('c2', provides=True), Lib('c3'))
     create_library('a/b/d')
     create_library('a/b/e', Lib('e1'))
-    cls.create_target('f', dedent('''
+    self.add_to_build_file('f', dedent('''
         dependencies(
           name='alias',
           dependencies=[
@@ -148,16 +164,9 @@ class ListTargetsTest(BaseListTargetsTest):
         ])
 
   def test_list_dedups(self):
-    def expand(spec):
-      for target in self.targets(spec):
-        for tgt in target.resolve():
-          if isinstance(tgt, Target) and tgt.is_concrete:
-            yield tgt
-
     targets = []
-    targets.extend(expand('a/b/d/::'))
-    targets.extend(expand('f::'))
-
+    targets.extend(self.targets('a/b/d/::'))
+    targets.extend(self.target('f:alias').dependencies)
     self.assertEquals(3, len(targets), "Expected a duplicate of a/b/d/BUILD:d")
     self.assert_console_output(
       'a/b/c/BUILD:c3',

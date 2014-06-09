@@ -59,6 +59,11 @@ class Phase(PhaseBase):
 
   @staticmethod
   def setup_parser(parser, args, phases):
+    """Set up an OptionParser with options info for a phase and its deps.
+    This readies the parser to handle options for this phase and its deps.
+    It does not set up everything you might want for displaying help.
+    For that, you want setup_parser_for_help.
+    """
     def do_setup_parser(phase, setup):
       for goal in phase.goals():
         if goal not in setup:
@@ -96,7 +101,7 @@ class Phase(PhaseBase):
       after: Places the goal after the named goal in the execution list
     """
 
-    if (first or replace or before or after) and not (first ^ replace ^ bool(before) ^ bool(after)):
+    if [bool(place) for place in [first, replace, before, after]].count(True) > 1:
       raise GoalError('Can only specify one of first, replace, before or after')
 
     Phase._phase_by_goal[goal] = self

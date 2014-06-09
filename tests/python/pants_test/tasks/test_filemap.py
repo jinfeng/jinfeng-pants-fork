@@ -7,33 +7,47 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
 import os
 from textwrap import dedent
 
-from pants.tasks.filemap import Filemap
+from pants.backend.core.tasks.filemap import Filemap
+from pants.base.source_root import SourceRoot
+from pants.backend.python.targets.python_library import PythonLibrary
 from pants_test.tasks.test_base import ConsoleTaskTest
 
 
 class FilemapTest(ConsoleTaskTest):
+  @property
+  def alias_groups(self):
+    return {
+      'target_aliases': {
+        'python_library': PythonLibrary,
+      },
+      'applicative_path_relative_utils': {
+        'source_root': SourceRoot,
+      },
+    }
+
   @classmethod
   def task_type(cls):
     return Filemap
 
-  @classmethod
-  def setUpClass(cls):
-    super(FilemapTest, cls).setUpClass()
+  def setUp(self):
+    super(FilemapTest, self).setUp()
 
-    def create_target(path, name, *files):
+    def add_to_build_file(path, name, *files):
       for f in files:
-        cls.create_file(os.path.join(path, f), '')
+        self.create_file(os.path.join(path, f), '')
 
-      cls.create_target(path, dedent('''
+      self.add_to_build_file(path, dedent('''
           python_library(name='%s',
             sources=[%s]
           )
           ''' % (name, ','.join(repr(f) for f in files))))
 
-    cls.create_target('common', 'source_root.here(python_library)')
-    create_target('common/a', 'a', 'one.py')
-    create_target('common/b', 'b', 'two.py', 'three.py')
-    create_target('common/c', 'c', 'four.py')
+    self.add_to_build_file('common', 'source_root.here(python_library)')
+    add_to_build_file('common/a', 'a', 'one.py')
+    add_to_build_file('common/b', 'b', 'two.py', 'three.py')
+    add_to_build_file('common/c', 'c', 'four.py')
+    add_to_build_file('common', 'dummy')
+    self.target('common/b')
 
   def test_all(self):
     self.assert_console_output(

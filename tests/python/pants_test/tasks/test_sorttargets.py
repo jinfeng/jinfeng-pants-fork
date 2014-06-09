@@ -6,7 +6,8 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
 
 from textwrap import dedent
 
-from pants.tasks.sorttargets import SortTargets
+from pants.backend.core.tasks.sorttargets import SortTargets
+from pants.backend.python.targets.python_library import PythonLibrary
 from pants_test.tasks.test_base import ConsoleTaskTest
 
 
@@ -22,22 +23,28 @@ class SortTargetsEmptyTest(BaseSortTargetsTest):
 
 
 class SortTargetsTest(BaseSortTargetsTest):
+  @property
+  def alias_groups(self):
+    return {
+      'target_aliases': {
+        'python_library': PythonLibrary,
+      },
+    }
 
-  @classmethod
-  def setUpClass(cls):
-    super(SortTargetsTest, cls).setUpClass()
+  def setUp(self):
+    super(SortTargetsTest, self).setUp()
 
-    def create_target(path, name, *deps):
-      all_deps = ["pants('%s')" % dep for dep in list(deps)]
-      cls.create_target(path, dedent('''
+    def add_to_build_file(path, name, *deps):
+      all_deps = ["'%s'" % dep for dep in list(deps)]
+      self.add_to_build_file(path, dedent('''
           python_library(name='%s',
             dependencies=[%s]
           )
           ''' % (name, ','.join(all_deps))))
 
-    create_target('common/a', 'a')
-    create_target('common/b', 'b', 'common/a')
-    create_target('common/c', 'c', 'common/a', 'common/b')
+    add_to_build_file('common/a', 'a')
+    add_to_build_file('common/b', 'b', 'common/a')
+    add_to_build_file('common/c', 'c', 'common/a', 'common/b')
 
   def test_sort(self):
     targets = [self.target('common/a'), self.target('common/c'), self.target('common/b')]

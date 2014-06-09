@@ -8,35 +8,43 @@ from textwrap import dedent
 
 import pytest
 
-from pants.targets.java_thrift_library import JavaThriftLibrary
-from pants.tasks import TaskError
-from pants.tasks.scrooge_gen import ScroogeGen
-from pants_test.base_build_root_test import BaseBuildRootTest
+from pants.backend.codegen.targets.java_thrift_library import JavaThriftLibrary
+from pants.backend.codegen.tasks.scrooge_gen import ScroogeGen
+from pants.base.exceptions import TaskError
+
+from pants_test.base_test import BaseTest
 
 
-class ScroogeGenTest(BaseBuildRootTest):
+class ScroogeGenTest(BaseTest):
+  @property
+  def alias_groups(self):
+    return {
+      'target_aliases': {
+        'java_thrift_library': JavaThriftLibrary,
+      },
+    }
 
   def test_validate(self):
     defaults = JavaThriftLibrary.Defaults()
 
-    self.create_target('test_validate', dedent('''
+    self.add_to_build_file('test_validate', dedent('''
       java_thrift_library(name='one',
-        sources=None,
-        dependencies=None,
+        sources=[],
+        dependencies=[],
       )
     '''))
 
-    self.create_target('test_validate', dedent('''
+    self.add_to_build_file('test_validate', dedent('''
       java_thrift_library(name='two',
-        sources=None,
-        dependencies=[pants(':one')],
+        sources=[],
+        dependencies=[':one'],
       )
     '''))
 
-    self.create_target('test_validate', dedent('''
+    self.add_to_build_file('test_validate', dedent('''
       java_thrift_library(name='three',
-        sources=None,
-        dependencies=[pants(':one')],
+        sources=[],
+        dependencies=[':one'],
         rpc_style='finagle',
       )
     '''))

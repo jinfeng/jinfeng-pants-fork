@@ -6,14 +6,10 @@ antlr_python_runtime==3.1.3
 
 coverage==3.7.1
 
-elementtree==1.2.7_20070827_preview
---allow-external elementtree
---allow-unverified elementtree
-
 Markdown==2.1.1
 mock==1.0.1
 mox==0.5.3
-psutil==1.1.2
+psutil==1.1.3
 Pygments==1.4
 pystache==0.5.3
 pytest==2.5.2
@@ -22,3 +18,4 @@ python_daemon==1.5.5
 requests==2.0.0
 setuptools==2.2
 thrift==0.9.1
+wheel==0.23.0

@@ -6,21 +6,40 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
 
 from textwrap import dedent
 
-from pants.tasks.check_published_deps import CheckPublishedDeps
+from pants.backend.core.targets.dependencies import Dependencies
+from pants.backend.jvm.targets.artifact import Artifact
+from pants.backend.jvm.targets.jar_dependency import JarDependency
+from pants.backend.jvm.targets.jar_library import JarLibrary
+from pants.backend.jvm.targets.java_library import JavaLibrary
+from pants.backend.jvm.targets.repository import Repository
+from pants.backend.jvm.tasks.check_published_deps import CheckPublishedDeps
 from pants_test.tasks.test_base import ConsoleTaskTest
 
 
 class CheckPublishedDepsTest(ConsoleTaskTest):
+  @property
+  def alias_groups(self):
+    return {
+      'target_aliases': {
+        'dependencies': Dependencies,
+        'jar_library': JarLibrary,
+        'java_library': JavaLibrary,
+        'repo': Repository,
+      },
+      'exposed_objects': {
+        'artifact': Artifact,
+        'jar': JarDependency,
+      },
+    }
 
   @classmethod
   def task_type(cls):
     return CheckPublishedDeps
 
-  @classmethod
-  def setUpClass(cls):
-    super(CheckPublishedDepsTest, cls).setUpClass()
+  def setUp(self):
+    super(CheckPublishedDepsTest, self).setUp()
 
-    cls.create_file('repo/pushdb/publish.properties', dedent('''
+    self.create_file('repo/pushdb/publish.properties', dedent('''
         revision.major.org.name%lib1=2
         revision.minor.org.name%lib1=0
         revision.patch.org.name%lib1=0
@@ -30,42 +49,42 @@ class CheckPublishedDepsTest(ConsoleTaskTest):
         revision.patch.org.name%lib2=0
         revision.sha.org.name%lib2=12345
         '''))
-    cls.create_target('repo/BUILD', dedent('''
+    self.add_to_build_file('repo/BUILD', dedent('''
         import os
         repo(name='repo',
              url='http://www.www.com',
              push_db=os.path.join(os.path.dirname(__file__), 'pushdb', 'publish.properties'))
         '''))
 
-    cls.create_target('provider/BUILD', dedent('''
+    self.add_to_build_file('provider/BUILD', dedent('''
         java_library(name='lib1',
           provides=artifact(
             org='org.name',
             name='lib1',
-            repo=pants('repo')),
+            repo='repo'),
           sources=[])
         java_library(name='lib2',
           provides=artifact(
             org='org.name',
             name='lib2',
-            repo=pants('repo')),
+            repo='repo'),
           sources=[])
         '''))
-    cls.create_target('outdated/BUILD', dedent('''
+    self.add_to_build_file('outdated/BUILD', dedent('''
         jar_library(name='outdated',
-          dependencies=[jar(org='org.name', name='lib1', rev='1.0.0')]
+          jars=[jar(org='org.name', name='lib1', rev='1.0.0')]
         )
         '''))
-    cls.create_target('uptodate/BUILD', dedent('''
+    self.add_to_build_file('uptodate/BUILD', dedent('''
         jar_library(name='uptodate',
-          dependencies=[jar(org='org.name', name='lib2', rev='2.0.0')]
+          jars=[jar(org='org.name', name='lib2', rev='2.0.0')]
         )
         '''))
-    cls.create_target('both/BUILD', dedent('''
+    self.add_to_build_file('both/BUILD', dedent('''
         dependencies(name='both',
           dependencies=[
-            pants('outdated'),
-            pants('uptodate'),
+            'outdated',
+            'uptodate',
           ]
         )
         '''))

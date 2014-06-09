@@ -6,13 +6,7 @@ A library owner/maintainer can *publish* versioned artifacts that
 folks elsewhere can fetch and import. In the JVM world, these are jars
 (with poms)
 on a server that Maven (or Ivy) looks for. (In the Python world, these are
-eggs; but as of late 2013, Pants doesn't help publish these.)
-
-.. WARNING::
-   This page describes ``pants goal publish``. Alas, this goal is not, in fact,
-   built into Pants *yet*. If you work in an organization with a Pants guru,
-   you might have a ``publish`` goal. Otherwise, please consider this a sneak
-   preview of an upcoming feature.
+eggs; but as of early 2014, Pants doesn't help publish these.)
 
 This page talks about publishing artifacts. We assume you already know enough
 about Pants to *build* the library that underlies an artifact.
@@ -125,9 +119,7 @@ How To
   with no changes.
 
 * Consider trying a local publish first. This lets you test the to-be-published
-  artifact. E.g., to test with Maven configured to use ``~/.m2/repository``
-  as a local repo, you could publish to that repo with
-  ``./pants goal publish --no-publish-dryrun --publish-local=~/.m2/repository``
+  artifact. See :ref:`publish_local_test`.
 
 * Start the publish: ``./pants goal publish --no-publish-dryrun [target]``
   Don't wander off; Pants will ask for confirmation as it goes
@@ -142,6 +134,59 @@ all publishing to happen on this source control branch, which you maintain
 extra-carefully. You can
 :ref:`configure your repo <setup_publish_restrict_branch>`
 so the ``publish`` goal only allows ``publish``-ing from this special branch.
+
+*****************************************
+Authenticating to the Artifact Repository
+*****************************************
+
+Your artifact repository probably doesn't accept anonymous uploads; you probably
+need to authenticate (prove that you are really you). Depending on how
+the artifact repository set up, Pants might need to interact the authentication
+system. (Or it might not. E.g., if your system uses Kerberos, when Pants invokes
+artifact-upload commands, Kerberos tickets should work automatically.)
+
+If Pants needs to provide your username and password, you can enable this
+via Pants' ``.netrc`` support. Pants can parse
+`.netrc files
+<http://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-File.html>`_
+to get a user's username and password on an artifact repository machine.
+To make this work:
+
+* Each user needs a ``~/.netrc`` file with a section that looks like ::
+
+    machine our-artifacts.archimedes.org
+      login sandy
+      password myamazingpa$sword
+
+* One of your top-level ``BUILD`` files needs a target that represents
+  ``netrc`` auth::
+
+    from pants.authentication.netrc import Netrc
+    netrc = Netrc()
+
+    credentials(
+      name = 'netrc',
+      username=netrc.getusername,
+      password=netrc.getpassword)
+
+* Your ``pants.ini`` file's ``'auth'`` section for that repository should
+  refer to that target::
+
+    [jar-publish]
+    workdir: %(pants_workdir)s/publish
+    repos: {
+        'external': {
+          'resolver': 'art.archimedes.org',
+          'confs': ['default', 'sources', 'docs', 'changelog'],
+          'auth': 'BUILD.archimedes:netrc',
+          'help': 'Configure your ~/.netrc for artifact repo access!'
+        },
+    }
+
+If you need to implement some other kind of authentication,
+you might look at `the Netrc implementation
+<https://github.com/pantsbuild/pants/blob/master/src/python/pants/authentication/netrc_util.py>`_
+and the :ref:`bdict_credentials` target type for inspiration.
 
 ***************
 Troubleshooting
@@ -247,9 +292,13 @@ Use ``--publish_override`` to set version numbers to avoid these.
 Does not provide an artifact
 ============================
 
-Pants gets the coordinates at which to publish a target from the target's
-``provides`` parameter. Thus, if you try to publish a target with no
-``provides``, Pants doesn't know what to do. It stops::
+A published artifact lives at a set of coordinates. For Pants to publish an
+artifact, it needs to know the artifact's coordinates.
+Pants gets the coordinates from the target's
+``provides`` parameter. Thus, if you try to publish a target
+that depends on a target
+that has no ``provides``,
+Pants doesn't know what to do. It stops::
 
   FAILURE: The following errors must be resolved to publish.
     Cannot publish src/java/com/twitter/common/base/BUILD:base due to:
@@ -261,6 +310,19 @@ Remember, to publish a target, the target's dependencies must also be published.
 If any of those dependencies have changed since their last publish, Pants
 tries to publish them before publishing the target you specify. Thus, you
 might need to add a ``provides`` to one or more of these.
+
+Silently does not publish
+=========================
+
+A published artifact lives at a set of coordinates. For Pants to publish an
+artifact, it needs to know the artifact's coordinates.
+Pants gets the coordinates from the target's
+``provides`` parameter. Thus, if you try to publish a target
+that has no ``provides``,
+Pants doesn't try. If the target depends on *other*
+targets that *do* provide artifacts, Pants might publish those.
+This is a case of :ref:`goal-target mismatch <tut_goal_target_mismatch>`.
+To fix this, set ``provides`` correctly.
 
 **********************************************
 Want to Publish Something? Publish Many Things
@@ -295,3 +357,28 @@ In this example, when you publish ``high-level``, Pants knows to also publish
 If Pants publishes ``util``, it does *not* automatically try to publish
 ``high-level`` or ``other-high-level``.
 
+.. _publish_local_test:
+
+********************************
+Test with a Fake Local "Publish"
+********************************
+
+The whole reason you publish an artifact so that other codebases can use it.
+Before you really publish, you might want to fake-publish an artifact:
+generate it and put it someplace a place in your development machine;
+then use that artifact from another codebase.
+
+For example, your other codebase might use
+Maven to build, perhaps with Maven configured to use ``~/.m2/repository``
+as a local repo.
+You can make pants publish to that local repo with ::
+
+    ./pants goal publish --no-publish-dryrun --publish-local=~/.m2/repository
+
+In the other codebase, change the dependencies to pull in the new artifact.
+
+If your other codebase *also* uses Pants build, you can depend on the
+locally-published artifact. If the artifact is a jar, then in the
+3rdparty
+:ref:`jar target <bdict_jar>`,
+set ``mutable=True`` and change the version number.
