@@ -91,15 +91,6 @@ jar_library(name='guava',
             ],
            )
 
-jar_library(name='guice',
-            jars = [
-              jar(
-                org='com.google.inject', name='guice', rev='3.0',
-                apidocs='http://google-guice.googlecode.com/svn/tags/3.0/javadoc/'
-              ).with_sources()
-            ]
-           )
-
 jar_library(name='jsr305',
             jars = [
               jar(org='com.google.code.findbugs', name='jsr305', rev='1.3.9')
