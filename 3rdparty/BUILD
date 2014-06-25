@@ -178,12 +178,6 @@ jar_library(name='util-core',
 # Test support
 #
 
-jar_library(name='mockito',
-            jars = [
-              jar(org='org.mockito', name='mockito-all', rev='1.9.0').with_sources()
-            ]
-           )
-
 jar_library(name='hamcrest-core',
             jars = [ jar(org='org.hamcrest', name='hamcrest-core', rev='1.3') ])
 
