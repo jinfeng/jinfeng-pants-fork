@@ -178,15 +178,6 @@ jar_library(name='util-core',
 # Test support
 #
 
-jar_library(name='easymock',
-            jars = [
-              jar(org='org.easymock', name='easymock', rev='3.2').with_sources(),
-              # Class extension is needed to support the old version of easymockclassextension that
-              # is not dependend on by the easymock dependency
-              jar(org='org.easymock', name='easymockclassextension', rev='3.2').with_sources(),
-            ]
-           )
-
 jar_library(name='mockito',
             jars = [
               jar(org='org.mockito', name='mockito-all', rev='1.9.0').with_sources()
