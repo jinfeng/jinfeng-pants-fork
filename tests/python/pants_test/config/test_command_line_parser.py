@@ -6,7 +6,7 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
 
 import unittest
 
-from pants.config.command_line_parser import CommandLineArgumentError, CommandLineParser
+from pants.option.command_line_parser import CommandLineArgumentError, CommandLineParser
 
 
 class CommandLineParserTest(unittest.TestCase):
