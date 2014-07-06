@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -17,6 +18,10 @@ class CodeGen(Task):
   This Task will only invoke code generation for changed targets and for the set of languages
   in the active context that require codegen unless forced.
   """
+
+  @classmethod
+  def product_type(cls):
+    return ['java', 'scala']
 
   def is_gentarget(self, target):
     """Subclass must return True if it handles generating for the target."""
@@ -62,6 +67,9 @@ class CodeGen(Task):
 
   def updatedependencies(self, target, dependency):
     target.inject_dependency(dependency.address)
+
+  def prepare(self, round_manager):
+    round_manager.require_data('jvm_build_tools_classpath_callbacks')
 
   def execute(self):
     gentargets = self.context.targets(self.is_gentarget)

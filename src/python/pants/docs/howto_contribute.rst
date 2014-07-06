@@ -35,6 +35,9 @@ notifications of new issues, etc.
 Follow `@pantsbuild on Twitter <https://twitter.com/pantsbuild>`_
 for occasional announcements.
 
+Find out when the CI tests go red/green by adding your email address to
+`.travis.yml <https://github.com/pantsbuild/pants/blob/master/.travis.yml>`_.
+
 ****************
 Life of a Change
 ****************
@@ -91,17 +94,8 @@ Run the CI Tests
 ================
 
 Before posting a review but certainly before the branch ships you should run
-relevant tests. If you're not sure what those are you can always run the
-same test set-up that's run on `Travis CI
-<https://travis-ci.org/pantsbuild/pants>`_.
-
-To run the full jvm and python suite including a pants self-rebuild. ::
-
-   ./build-support/bin/ci.sh
-
-You can also skip certain steps including pants bootstrapping. Just use the
-``-h`` argument to get command line help on the options available.
-
+relevant tests. If you're not sure what those are,
+:ref:`run all the tests <dev_run_all_tests>`.
 
 Code Review
 ===========

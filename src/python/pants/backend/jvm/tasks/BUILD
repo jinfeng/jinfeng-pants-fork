@@ -101,23 +101,9 @@ python_library(
   name = 'check_published_deps',
   sources = ['check_published_deps.py'],
   dependencies = [
-    pants(':common'),
     pants(':jar_publish'),
-    pants('src/python/pants/backend/core/targets:common'),
-    pants('src/python/pants/backend/core/tasks:console_task'),
-    pants('src/python/pants/backend/core/tasks:scm_publish'),
-    pants('src/python/pants/backend/core/tasks:task'),
     pants('src/python/pants/backend/jvm/targets:jvm'),
-    pants('src/python/pants/backend/jvm/targets:scala'),
-    pants('src/python/pants/backend/jvm:ivy_utils'),
-    pants('src/python/pants/base:address'),
-    pants('src/python/pants/base:build_environment'),
-    pants('src/python/pants/base:build_file'),
-    pants('src/python/pants/base:build_graph'),
-    pants('src/python/pants/base:exceptions'),
-    pants('src/python/pants/base:generator'),
-    pants('src/python/pants/base:target'),
-    pants('src/python/pants/ivy'),
+    pants('src/python/pants/backend/core/tasks:console_task'),
   ],
 )
 
@@ -382,6 +368,7 @@ python_library(
   sources = ['jvmdoc_gen.py'],
   dependencies = [
     pants(':common'),
+    pants(':jvm_task'),
     pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
     pants('src/python/pants:binary_util'),
   ],
@@ -420,9 +407,10 @@ python_library(
   dependencies = [
     pants(':common'),
     pants(':jvm_task'),
-    pants('src/python/pants/base:workunit'),
-    pants('src/python/pants/java:util'),
     pants('src/python/pants/backend/jvm/tasks:jvm_tool_task_mixin'),
+    pants('src/python/pants/base:workunit'),
+    pants('src/python/pants/console:stty_utils'),
+    pants('src/python/pants/java:util'),
   ],
 )
 

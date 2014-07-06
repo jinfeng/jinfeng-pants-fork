@@ -6,6 +6,7 @@ python_library(
   sources = ['test_base.py'],
   dependencies = [
     pants('3rdparty/python/twitter/commons:twitter.common.collections'),
+    pants('src/python/pants/base:cmd_line_spec_parser'),
     pants('src/python/pants/base:target'),
     pants('src/python/pants/commands:goal'),
     pants('src/python/pants/goal'),
@@ -20,8 +21,7 @@ python_test_suite(
   name = 'tasks',
   dependencies = [
     pants(':binary_create'),
-    # XXX(pl): This is broken again
-    # pants(':builddict'),
+    pants(':builddict'),
     pants(':bundle_create'),
     pants(':cache_manager'),
     pants(':check_exclusives'),
@@ -32,20 +32,35 @@ python_test_suite(
     pants(':dependees'),
     pants(':dependencies'),
     pants(':depmap'),
+    pants(':detect_duplicates'),
     pants(':filemap'),
     pants(':filter'),
     pants(':group_task'),
     pants(':jar_create'),
     pants(':jar_publish'),
     pants(':jar_task'),
+    pants(':jaxb_gen'),
+    pants(':jvm_task'),
+    pants(':jvmdoc_gen'),
+    pants(':list_goals'),
     pants(':listtargets'),
     pants(':minimal_cover'),
     pants(':protobuf_gen'),
     pants(':roots'),
     pants(':scrooge_gen'),
     pants(':sorttargets'),
+    pants(':targets_help'),
     pants(':what_changed'),
     pants('tests/python/pants_test/tasks/jvm_compile')
+  ],
+)
+
+python_test_suite(
+  name = 'integration',
+  dependencies = [
+    pants(':jar_publish_integration'),
+    pants(':jvm_bundle_integration'),
+    pants(':scala_repl_integration'),
   ],
 )
 
@@ -74,6 +89,22 @@ python_tests(
     pants(':base'),
     pants('src/python/pants/backend/jvm/tasks:bundle_create'),
   ]
+)
+
+python_tests(
+  name = 'jvm_bundle_integration',
+  sources = ['test_jvm_bundle_integration.py'],
+  dependencies = [
+    pants('tests/python/pants_test:int-test'),
+  ],
+)
+
+python_tests(
+  name = 'scala_repl_integration',
+  sources = ['test_scala_repl_integration.py'],
+  dependencies = [
+    pants('tests/python/pants_test:int-test'),
+  ],
 )
 
 python_tests(
@@ -187,14 +218,15 @@ python_tests(
   ]
 )
 
-# XXX(pl): This test isn't rolled into :all and is broken
 python_tests(
   name = 'detect_duplicates',
   sources = ['test_detect_duplicates.py'],
   dependencies = [
     pants(':base'),
     pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
+    pants('src/python/pants/base:exceptions'),
     pants('src/python/pants/backend/jvm/tasks:detect_duplicates'),
+    pants('tests/python/pants_test/base:context_utils'),
   ],
 )
 
@@ -228,6 +260,7 @@ python_tests(
     pants('3rdparty/python/twitter/commons:twitter.common.contextutil'),
     pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
     pants(':base'),
+    pants('src/python/pants/backend/android/targets:android'),
     pants('src/python/pants/backend/codegen/targets:java'),
     pants('src/python/pants/backend/core/targets:common'),
     pants('src/python/pants/backend/jvm/targets:java'),
@@ -254,13 +287,23 @@ python_tests(
   ],
 )
 
-# XXX(pl): Test is broken and not in :all
 python_tests(
   name = 'jar_publish_integration',
   sources = ['test_jar_publish_integration.py'],
   dependencies = [
-    pants('3rdparty/python:mock'),
+    pants('3rdparty/python/twitter/commons:twitter.common.contextutil'),
     pants('tests/python/pants_test:int-test'),
+  ],
+)
+
+python_tests(
+  name = 'list_goals',
+  sources = ['test_list_goals.py'],
+  dependencies = [
+    pants(':base'),
+    pants('src/python/pants/backend/core/tasks:list_goals'),
+    pants('src/python/pants/backend/core/tasks:common'),
+    pants('src/python/pants/goal'),
   ],
 )
 
@@ -297,6 +340,17 @@ python_tests(
 )
 
 python_tests(
+  name = 'jaxb_gen',
+  sources = ['test_jaxb_gen.py'],
+  dependencies = [
+    pants(':base'),
+    pants('3rdparty/python/twitter/commons:twitter.common.contextutil'),
+    pants('src/python/pants/backend/codegen/tasks:jaxb_gen'),
+    pants('src/python/pants/backend/codegen/targets:java'),
+  ],
+)
+
+python_tests(
   name = 'roots',
   sources = ['test_roots.py'],
   dependencies = [
@@ -312,6 +366,7 @@ python_tests(
   name = 'scrooge_gen',
   sources = ['test_scrooge_gen.py'],
   dependencies = [
+    pants('3rdparty/python:mock'),
     pants(':base'),
     pants('src/python/pants/backend/codegen/targets:java'),
     pants('src/python/pants/backend/codegen/tasks:scrooge_gen'),
@@ -330,7 +385,6 @@ python_tests(
   ],
 )
 
-# XXX(pl): Test is broken and not in :all
 python_tests(
   name = 'targets_help',
   sources = ['test_targets_help.py'],
@@ -379,9 +433,32 @@ python_tests(
   dependencies = [
     pants('src/python/pants/backend/core/tasks:check_exclusives'),
     pants('src/python/pants/backend/core/tasks:group_task'),
+    pants('src/python/pants/engine:engine'),
     pants('src/python/pants/backend/jvm/targets:java'),
     pants('src/python/pants/backend/jvm/targets:scala'),
     pants('src/python/pants/backend/python/targets:python'),
+    pants('tests/python/pants_test:base_test'),
+  ]
+)
+
+python_tests(
+  name = 'jvm_task',
+  sources = ['test_jvm_task.py'],
+  dependencies = [
+    pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
+    pants('src/python/pants/backend/core/tasks:check_exclusives'),
+    pants('src/python/pants/backend/jvm/tasks:jvm_task'),
+    pants('tests/python/pants_test:base_test'),
+  ]
+)
+
+python_tests(
+  name = 'jvmdoc_gen',
+  sources = ['test_jvmdoc_gen.py'],
+  dependencies = [
+    pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
+    pants('src/python/pants/backend/core/tasks:check_exclusives'),
+    pants('src/python/pants/backend/jvm/tasks:jvmdoc_gen'),
     pants('tests/python/pants_test:base_test'),
   ]
 )

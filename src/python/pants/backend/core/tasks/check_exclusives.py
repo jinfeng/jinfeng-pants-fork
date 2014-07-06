@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -13,6 +14,8 @@ from pants.base.exceptions import TaskError
 from pants.base.target import Target
 from pants.backend.core.tasks.task import Task
 
+
+# TODO(benjy): The exclusives implementation needs re-doing. It's too clunky right now.
 
 class CheckExclusives(Task):
   """Computes transitive exclusive maps.
@@ -57,6 +60,10 @@ class CheckExclusives(Task):
   """
 
   @classmethod
+  def product_type(cls):
+    return ['exclusives_groups']
+
+  @classmethod
   def setup_parser(cls, option_group, args, mkflag):
     option_group.add_option(mkflag('error_on_collision'),
                             mkflag('error_on_collision', negate=True),
@@ -69,6 +76,10 @@ class CheckExclusives(Task):
     super(CheckExclusives, self).__init__(context, workdir)
     self.signal_error = (context.options.exclusives_error_on_collision
                          if signal_error is None else signal_error)
+
+  def prepare(self, round_manager):
+    round_manager.require_data('java')
+    round_manager.require_data('scala')
 
   def _compute_exclusives_conflicts(self, targets):
     """Compute the set of distinct chunks of targets that are required based on exclusives.

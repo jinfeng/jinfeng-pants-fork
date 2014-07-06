@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -55,9 +56,11 @@ class ConfluencePublish(Task):
 
     self.force = context.options.confluence_publish_force
     self.open = context.options.confluence_publish_open
-    self.context.products.require('wiki_html')
     self._wiki = None
     self.user = context.options.confluence_user
+
+  def prepare(self, round_manager):
+    round_manager.require('wiki_html')
 
   def wiki(self):
     raise NotImplementedError('Subclasses must provide the wiki target they are associated with')
@@ -70,15 +73,14 @@ class ConfluencePublish(Task):
     targets = self.context.targets()
     for target in targets:
       if isinstance(target, Page):
-        wikiconfig = target.wiki_config(self.wiki())
-        if wikiconfig:
-          pages.append((target, wikiconfig))
+        for wiki_artifact in target.payload.provides:
+          pages.append((target, wiki_artifact))
 
     urls = list()
 
     genmap = self.context.products.get('wiki_html')
-    for page, wikiconfig in pages:
-      html_info = genmap.get((self.wiki(), page))
+    for page, wiki_artifact in pages:
+      html_info = genmap.get((wiki_artifact, page))
       if len(html_info) > 1:
         raise TaskError('Unexpected resources for %s: %s' % (page, html_info))
       basedir, htmls = html_info.items()[0]
@@ -87,10 +89,11 @@ class ConfluencePublish(Task):
       with safe_open(os.path.join(basedir, htmls[0])) as contents:
         url = self.publish_page(
           page.address,
-          wikiconfig['space'],
-          wikiconfig['title'],
+          wiki_artifact.config['space'],
+          wiki_artifact.config['title'],
           contents.read(),
-          parent=wikiconfig.get('parent')
+          # Default to none if not present in the hash.
+          parent=wiki_artifact.config.get('parent')
         )
         if url:
           urls.append(url)

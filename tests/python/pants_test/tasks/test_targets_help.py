@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -19,9 +20,8 @@ class TargetsHelpTest(ConsoleTaskTest):
   def task_type(cls):
     return TargetsHelp
 
-  @classmethod
-  def setUpClass(cls):
-    super(TargetsHelpTest, cls).setUpClass()
+  def setUp(self):
+    super(TargetsHelpTest, self).setUp()
     SourceRoot.register(os.path.join(get_buildroot(), 'fakeroot'), TargetsHelpTest.MyTarget)
 
   def test_list_installed_targets(self):

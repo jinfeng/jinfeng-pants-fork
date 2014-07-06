@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -30,7 +31,7 @@ class DocBuilder(object):
     template = pkgutil.get_data(__name__, template_path)
     for target in targets:
       assert is_doc(target), 'DocBuilder can only build DocTargets, given %s' % str(target)
-      base_dir = os.path.dirname(target.address.buildfile.full_path)
+      base_dir = os.path.dirname(target.address.build_file.full_path)
       target_base = target.target_base
       print('building doc for %s' % str(target))
       output_dir = os.path.normpath(os.path.join(self.root_dir, target.id))

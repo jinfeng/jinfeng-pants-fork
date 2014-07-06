@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -9,7 +10,7 @@ from pants.base.payload import JarLibraryPayload
 from pants.base.target import Target
 
 
-@manual.builddict(tags=["anylang"])
+@manual.builddict(tags=["jvm"])
 class JarLibrary(Target):
   """A set of jars that may be depended upon."""
 

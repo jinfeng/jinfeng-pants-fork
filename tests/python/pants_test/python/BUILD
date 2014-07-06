@@ -18,6 +18,15 @@ python_test_suite(
   ]
 )
 
+python_test_suite(
+  name = 'integration',
+  dependencies = [
+    pants(':interpreter_selection_integration'),
+    pants(':python_repl_integration'),
+    pants(':python_run_integration'),
+  ]
+)
+
 # XXX this tests the code running the test, not the code under test!
 python_tests(
   name = 'test_antlr_builder',
@@ -61,4 +70,76 @@ python_tests(name = 'test_thrift_builder',
     pants('tests/python/pants_test/base:context_utils'),
     pants('tests/python/pants_test:base_test'),
   ]
+)
+
+python_library(
+  name = 'echo_interpreter_version_lib',
+  sources = ['echo_interpreter_version.py'],
+  dependencies = [],
+  # Play with this to test interpreter selection in the pex machinery.
+  compatibility = ['CPython>=2.6,<3']
+)
+
+python_tests(
+  name = 'interpreter_selection_integration',
+  sources = ['test_interpreter_selection_integration.py'],
+  dependencies = [
+    pants('3rdparty/python/twitter/commons:twitter.common.contextutil'),
+    pants('tests/python/pants_test:int-test'),
+  ],
+)
+
+python_tests(
+  name = 'python_run_integration',
+  sources = ['test_python_run_integration.py'],
+  dependencies = [
+    pants('tests/python/pants_test:int-test'),
+  ],
+)
+
+python_tests(
+  name = 'python_repl_integration',
+  sources = ['test_python_repl_integration.py'],
+  dependencies = [
+    pants('tests/python/pants_test:int-test'),
+  ],
+)
+
+# Used by interpreter_selection_integration.
+python_binary(
+  name = 'echo_interpreter_version_2.6',
+  dependencies = [
+    pants(':echo_interpreter_version_lib'),
+  ],
+  entry_point = 'pants_test.python.echo_interpreter_version',
+  compatibility = ['CPython>=2.6,<3']
+)
+
+# Used by interpreter_selection_integration.
+python_binary(
+  name = 'echo_interpreter_version_2.7',
+  dependencies = [
+    pants(':echo_interpreter_version_lib'),
+  ],
+  entry_point = 'pants_test.python.echo_interpreter_version',
+  compatibility = ['CPython>=2.7,<3']
+)
+
+# Useful for manual testing.
+python_binary(
+  name = 'echo_interpreter_version',
+  dependencies = [
+    pants(':echo_interpreter_version_lib'),
+  ],
+  entry_point = 'pants_test.python.echo_interpreter_version',
+)
+
+# Useful for manual testing.
+python_binary(
+  name = 'deliberately_conficting_compatibility',
+  dependencies = [
+    pants(':echo_interpreter_version_lib'),
+  ],
+  entry_point = 'pants_test.python.echo_interpreter_version',
+  compatibility = ['CPython<2.6']
 )

@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -13,8 +14,8 @@ from StringIO import StringIO
 
 from twitter.common.collections import maybe_list
 
+from pants.base.cmd_line_spec_parser import CmdLineSpecParser
 from pants.base.target import Target
-from pants.commands.goal import SpecParser
 from pants.goal import Context, Mkflag
 from pants.backend.core.tasks.task import Task
 from pants.backend.core.tasks.console_task import ConsoleTask
@@ -73,7 +74,8 @@ class TaskTest(BaseTest):
 
     Returns the set of all Targets found.
     """
-    addresses = list(SpecParser(self.build_root, self.build_file_parser).parse_addresses(spec))
+    spec_parser = CmdLineSpecParser(self.build_root, self.build_file_parser)
+    addresses = list(spec_parser.parse_addresses(spec))
     for address in addresses:
       self.build_file_parser.inject_spec_closure_into_build_graph(address.spec, self.build_graph)
     targets = [self.build_graph.get_target(address) for address in addresses]

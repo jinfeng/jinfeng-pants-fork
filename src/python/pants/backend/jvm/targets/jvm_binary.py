@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -284,6 +285,7 @@ class RelativeToMapper(object):
 class Bundle(object):
   """A set of files to include in an application bundle.
 
+  To learn about application bundles, see :ref:`jvm_bundles`.
   Looking for Java-style resources accessible via the ``Class.getResource`` API?
   Those are :ref:`bdict_resources`\ .
 
@@ -363,10 +365,12 @@ class JvmApp(Target):
   extra files like config files, startup scripts, etc.
   """
 
-  def __init__(self, name=None, bundles=None, basename=None, **kwargs):
+  def __init__(self, name=None, binary=None, bundles=None, basename=None, **kwargs):
     """
     :param string name: The name of this target, which combined with this
       build file defines the target :class:`pants.base.address.Address`.
+    :param binary: A pointer to the :class:`pants.targets.jvm_binary.JvmBinary`. that contains the
+      app main.
     :param bundles: One or more :class:`pants.targets.jvm_binary.Bundle`'s
       describing "extra files" that should be included with this app
       (e.g.: config files, startup scripts).
@@ -379,7 +383,17 @@ class JvmApp(Target):
 
     if name == basename:
       raise TargetDefinitionException(self, 'basename must not equal name.')
-    self.basename = basename or name
+    self._basename = basename or name
+
+    self._binary = binary
+
+  @property
+  def traversable_dependency_specs(self):
+    return [self._binary] if self._binary else []
+
+  @property
+  def basename(self):
+    return self._basename
 
   @property
   def bundles(self):
@@ -387,8 +401,15 @@ class JvmApp(Target):
 
   @property
   def binary(self):
-    # TODO(pl): Assert there is only one dep and it is a JvmBinary
-    return self.dependencies[0]
+    dependencies = self.dependencies
+    if len(dependencies) != 1:
+      raise TargetDefinitionException(self, 'A JvmApp must define exactly one JvmBinary '
+                                            'dependency, have: %s' % dependencies)
+    binary = dependencies[0]
+    if not isinstance(binary, JvmBinary):
+      raise TargetDefinitionException(self, 'Expected JvmApp binary dependency to be a JvmBinary '
+                                            'target, found %s' % binary)
+    return binary
 
   @property
   def jar_dependencies(self):

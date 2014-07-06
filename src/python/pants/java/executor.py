@@ -1,19 +1,21 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
 from __future__ import (nested_scopes, generators, division, absolute_import, with_statement,
                         print_function, unicode_literals)
 
-import os
-import subprocess
 from abc import abstractmethod, abstractproperty
 from contextlib import contextmanager
+import os
+import subprocess
 
 from twitter.common import log
 from twitter.common.collections import maybe_list
 from twitter.common.contextutil import environment_as
 from twitter.common.lang import AbstractClass, Compatibility
 
+from pants.base.build_environment import get_buildroot
 from pants.java.distribution import Distribution
 
 
@@ -128,9 +130,49 @@ class CommandLineGrabber(Executor):
 class SubprocessExecutor(Executor):
   """Executes java programs by launching a jvm in a subprocess."""
 
-  def __init__(self, distribution=None, scrub_classpath=True):
+  _SCRUBBED_ENV = {
+      # We attempt to control the classpath for correctness, caching and invalidation reasons and
+      # allowing CLASSPATH to influence would be a hermeticity leak
+      'CLASSPATH': None,
+
+      # We attempt to control jvm options and give user's explicit control in some cases as well.
+      # In all cases we want predictable behavior - pants defaults, repo defaults, or user tweaks
+      # specified on the command line.  In addition cli options can affect outputs; ie: class debug
+      # info, target classfile version, etc - all breaking hermeticity.
+      '_JAVA_OPTIONS': None,
+      'JAVA_TOOL_OPTIONS': None
+  }
+
+  @classmethod
+  @contextmanager
+  def _maybe_scrubbed_env(cls):
+    for env_var in cls._SCRUBBED_ENV:
+      value = os.getenv(env_var)
+      if value:
+        log.warn('Scrubbing {env_var}={value}'.format(env_var=env_var, value=value))
+    with environment_as(**cls._SCRUBBED_ENV):
+      yield
+
+  def __init__(self, distribution=None):
     super(SubprocessExecutor, self).__init__(distribution=distribution)
-    self._scrub_classpath = scrub_classpath
+    self._buildroot = get_buildroot()
+
+  def _create_command(self, classpath, main, jvm_options, args):
+
+    # When running pants under mesos/aurora, the sandbox pathname can be very long. Since it gets
+    # prepended to most components in the classpath (some from ivy, the rest from the build),
+    # in some runs the classpath gets too big and exceeds ARG_MAX.
+    # We prevent this by using paths relative to the current working directory.
+    def make_relative_path(path):
+      path = os.path.realpath(path)
+      relative_path = os.path.relpath(path, self._buildroot)
+      final_path = relative_path if len(relative_path) < len(path) else path
+      return final_path
+
+    classpath = [make_relative_path(p) for p in classpath]
+
+    log.debug('The length of the the classpath is: %s' % len(classpath))
+    return super(SubprocessExecutor, self)._create_command(classpath, main, jvm_options, args)
 
   def _runner(self, classpath, main, jvm_options, args):
     command = self._create_command(classpath, main, jvm_options, args)
@@ -158,20 +200,9 @@ class SubprocessExecutor(Executor):
     return self._spawn(cmd, **subprocess_args)
 
   def _spawn(self, cmd, **subprocess_args):
-    with self._maybe_scrubbed_classpath():
+    with self._maybe_scrubbed_env():
       log.debug('Executing: %s' % ' '.join(cmd))
       try:
-        return subprocess.Popen(cmd, **subprocess_args)
+        return subprocess.Popen(cmd, cwd=self._buildroot, **subprocess_args)
       except OSError as e:
         raise self.Error('Problem executing %s: %s' % (self._distribution.java, e))
-
-  @contextmanager
-  def _maybe_scrubbed_classpath(self):
-    if self._scrub_classpath:
-      classpath = os.getenv('CLASSPATH')
-      if classpath:
-        log.warn('Scrubbing CLASSPATH=%s' % classpath)
-      with environment_as(CLASSPATH=None):
-        yield
-    else:
-      yield

@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -6,11 +7,10 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
 
 import os
 
-from twitter.common.dirutil.fileset import Fileset
 from twitter.common.quantity import Amount, Time
 
 from pants.backend.core.targets.dependencies import Dependencies
-from pants.backend.core.targets.doc import Page, Wiki
+from pants.backend.core.targets.doc import Page, Wiki, WikiArtifact
 from pants.backend.core.targets.resources import Resources
 from pants.backend.core.tasks.build_lint import BuildLint
 from pants.backend.core.tasks.builddictionary import BuildBuildDictionary
@@ -34,8 +34,7 @@ from pants.backend.core.wrapped_globs import Globs, RGlobs, ZGlobs
 from pants.base.build_environment import get_buildroot, get_version, get_scm, set_scm
 from pants.base.config import Config
 from pants.base.source_root import SourceRoot
-from pants.goal import Goal as goal, Group as group
-from pants.goal import Goal, Group, Phase
+from pants.goal import Goal, Goal as goal, Phase
 
 
 class BuildFilePath(object):
@@ -82,11 +81,11 @@ def object_aliases():
     'get_scm': get_scm,
     'get_version': get_version,
     'goal': Goal,
-    'group': Group,
     'pants': lambda x: x,
     'phase': Phase,
     'set_scm': set_scm,
     'Time': Time,
+    'wiki_artifact': WikiArtifact,
   }
 
 

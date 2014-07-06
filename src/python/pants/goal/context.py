@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -256,7 +257,7 @@ class Context(object):
   def resolve(self, spec):
     """Returns an iterator over the target(s) the given address points to."""
     self.build_file_parser.inject_spec_closure_into_build_graph(spec, self.build_graph)
-    return self.build_graph.transitive_subgraph_of_addresses([SyntheticAddress(spec)])
+    return self.build_graph.transitive_subgraph_of_addresses([SyntheticAddress.parse(spec)])
 
   @contextmanager
   def state(self, key, default=None):

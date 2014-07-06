@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -29,6 +30,11 @@ class ScalaLibraryTest(BaseTest):
 
   def setUp(self):
     super(ScalaLibraryTest, self).setUp()
+
+    self.create_file('pants.ini', dedent('''
+        [scala-compile]
+        runtime-deps: []
+        '''))
 
     self.add_to_build_file('3rdparty', dedent('''
         jar_library(

@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -24,7 +25,7 @@ class SortTargets(ConsoleTask):
     option_group.add_option(mkflag("reverse"), mkflag("reverse", negate=True),
                             dest="sort_targets_reverse", default=False,
                             action="callback", callback=mkflag.set_bool,
-                            help="[%default] Sort least depenendent to most.")
+                            help="[%default] Sort least dependent to most.")
 
   def __init__(self, *args, **kwargs):
     super(SortTargets, self).__init__(*args, **kwargs)
@@ -34,9 +35,9 @@ class SortTargets(ConsoleTask):
     depmap = defaultdict(set)
 
     def map_deps(target):
-      deps = depmap[target.address.build_file_spec]
+      deps = depmap[target.address.spec]
       for dep in target.dependencies:
-        deps.add(dep.address.build_file_spec)
+        deps.add(dep.address.spec)
 
     for root in self.context.target_roots:
       root.walk(map_deps)
@@ -47,7 +48,7 @@ class SortTargets(ConsoleTask):
     if self._reverse:
       tsorted = reversed(tsorted)
 
-    roots = set(root.address.build_file_spec for root in self.context.target_roots)
+    roots = set(root.address.spec for root in self.context.target_roots)
     for address in tsorted:
       if address in roots:
         yield address

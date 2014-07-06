@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -57,6 +58,7 @@ class ApacheThriftGen(CodeGen):
     option_group.add_option(mkflag('lang'), dest='thrift_gen_langs',  default=[],
                             action='append', type='choice', choices=['python', 'java'],
                             help='Force generation of thrift code for these languages.')
+
 
   def __init__(self, context, workdir):
     super(ApacheThriftGen, self).__init__(context, workdir)
@@ -190,7 +192,7 @@ class ApacheThriftGen(CodeGen):
     def create_target(files, deps):
       spec_path = os.path.join(self.combined_relpath, 'gen-java')
       spec = '{spec_path}:{name}'.format(spec_path=spec_path, name=target.id)
-      address = SyntheticAddress(spec=spec)
+      address = SyntheticAddress.parse(spec=spec)
       return self.context.add_new_target(address,
                                          JavaLibrary,
                                          derived_from=target,
@@ -204,7 +206,7 @@ class ApacheThriftGen(CodeGen):
     def create_target(files, deps):
       spec_path = os.path.join(self.combined_relpath, 'gen-py')
       spec = '{spec_path}:{name}'.format(spec_path=spec_path, name=target.id)
-      address = SyntheticAddress(spec=spec)
+      address = SyntheticAddress.parse(spec=spec)
       return self.context.add_new_target(address,
                                          PythonLibrary,
                                          derived_from=target,

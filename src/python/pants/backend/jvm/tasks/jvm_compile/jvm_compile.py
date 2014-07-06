@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -106,6 +107,10 @@ class JvmCompile(NailgunTaskBase, GroupMember, JvmToolTaskMixin):
   def name(cls):
     return cls._language
 
+  @classmethod
+  def product_type(cls):
+    return ['classes_by_target', 'classes_by_source']
+
   def select(self, target):
     return target.has_sources(self._file_suffix)
 
@@ -210,14 +215,6 @@ class JvmCompile(NailgunTaskBase, GroupMember, JvmToolTaskMixin):
     # The ivy confs for which we're building.
     self._confs = context.config.getlist(config_section, 'confs', default=['default'])
 
-    # Runtime dependencies.
-    runtime_deps = context.config.getlist(config_section, 'runtime-deps', default=[])
-    if runtime_deps:
-      self._runtime_deps_key = self._language + '-runtime-deps'
-      self.register_jvm_tool(self._runtime_deps_key, runtime_deps)
-    else:
-      self._runtime_deps_key = None
-
     # Set up dep checking if needed.
     def munge_flag(flag):
       return None if flag == 'off' else flag
@@ -240,9 +237,7 @@ class JvmCompile(NailgunTaskBase, GroupMember, JvmToolTaskMixin):
     self._locally_changed_targets_heuristic_limit = context.config.getint(config_section,
         'locally_changed_targets_heuristic_limit', 0)
 
-    self._class_to_jarfile = None  # Computed lazily as needed.
-
-    self.context.products.require_data('exclusives_groups')
+    self._upstream_class_to_path = None  # Computed lazily as needed.
     self.setup_artifact_cache_from_config(config_section=config_section)
 
     # Sources (relative to buildroot) present in the last analysis that have since been deleted.
@@ -252,6 +247,15 @@ class JvmCompile(NailgunTaskBase, GroupMember, JvmToolTaskMixin):
     # Map of target -> list of sources (relative to buildroot), for all targets in all chunks.
     # Populated in prepare_execute().
     self._sources_by_target = None
+
+  def prepare(self, round_manager):
+    # TODO(ity): this is essentially a fake requirement on 'ivy_jar_products' in order to force
+    # resolve to run before this phase, require on a new 'classpath' product (IvyResolve) instead.
+    # round_manager.require_data('classpath')
+    round_manager.require_data('ivy_jar_products')
+    round_manager.require_data('java')
+    round_manager.require_data('scala')
+
 
   def move(self, src, dst):
     if self._delete_scratch:
@@ -268,14 +272,10 @@ class JvmCompile(NailgunTaskBase, GroupMember, JvmToolTaskMixin):
     for t in all_targets:
       all_group_ids.add(egroups.get_group_key_for_target(t))
 
-    runtime_deps = self.tool_classpath(self._runtime_deps_key) if self._runtime_deps_key else []
-
     for conf in self._confs:
       for group_id in all_group_ids:
         egroups.update_compatible_classpaths(group_id, [(conf, self._classes_dir)])
         egroups.update_compatible_classpaths(group_id, [(conf, self._resources_dir)])
-        for dep in runtime_deps:
-          egroups.update_compatible_classpaths(group_id, [(conf, dep)])
 
     # Target -> sources (relative to buildroot).
     # TODO(benjy): Should sources_by_target be available in all Tasks?
@@ -682,28 +682,29 @@ class JvmCompile(NailgunTaskBase, GroupMember, JvmToolTaskMixin):
     return resolved_sources
 
   def _compute_classpath_elements_by_class(self, classpath):
-    # Don't consider loose classes dirs in our classpath. Those will be considered
+    # Don't consider loose classes dirs in our classes dir. Those will be considered
     # separately, by looking at products.
     def non_product(path):
-      return not (path.startswith(self._pants_workdir) and os.path.isdir(path))
-    classpath_jars = filter(non_product, classpath)
-    if self._class_to_jarfile is None:
-      self._class_to_jarfile = {}
-      for jarpath in self.find_all_bootstrap_jars() + classpath_jars:
+      return path != self._classes_dir
+
+    if self._upstream_class_to_path is None:
+      self._upstream_class_to_path = {}
+      classpath_entries = filter(non_product, classpath)
+      for cp_entry in self.find_all_bootstrap_jars() + classpath_entries:
         # Per the classloading spec, a 'jar' in this context can also be a .zip file.
-        if os.path.isfile(jarpath) and ((jarpath.endswith('.jar') or jarpath.endswith('.zip'))):
-          with open_zip(jarpath, 'r') as jar:
+        if os.path.isfile(cp_entry) and ((cp_entry.endswith('.jar') or cp_entry.endswith('.zip'))):
+          with open_zip(cp_entry, 'r') as jar:
             for cls in jar.namelist():
               # First jar with a given class wins, just like when classloading.
-              if cls.endswith(b'.class') and not cls in self._class_to_jarfile:
-                self._class_to_jarfile[cls] = jarpath
-        elif os.path.isdir(jarpath):
-          for dirpath, _, filenames in os.walk(jarpath, followlinks=True):
+              if cls.endswith(b'.class') and not cls in self._upstream_class_to_path:
+                self._upstream_class_to_path[cls] = cp_entry
+        elif os.path.isdir(cp_entry):
+          for dirpath, _, filenames in os.walk(cp_entry, followlinks=True):
             for f in filter(lambda x: x.endswith('.class'), filenames):
-              cls = os.path.relpath(os.path.join(dirpath, f), jarpath)
-              if not cls in self._class_to_jarfile:
-                self._class_to_jarfile[cls] = jarpath
-    return self._class_to_jarfile
+              cls = os.path.relpath(os.path.join(dirpath, f), cp_entry)
+              if not cls in self._upstream_class_to_path:
+                self._upstream_class_to_path[cls] = os.path.join(dirpath, f)
+    return self._upstream_class_to_path
 
   def find_all_bootstrap_jars(self):
     def get_path(key):
@@ -782,6 +783,7 @@ class JvmCompile(NailgunTaskBase, GroupMember, JvmToolTaskMixin):
           if classes_by_source is not None:
             classes_by_source[source].add_abs_paths(self._classes_dir, classes)
 
+    # TODO(pl): https://github.com/pantsbuild/pants/issues/206
     if resources_by_target is not None:
       for target in targets:
         target_resources = resources_by_target[target]

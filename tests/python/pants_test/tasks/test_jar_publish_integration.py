@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -5,20 +6,28 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
                         print_function, unicode_literals)
 
 import os
+import subprocess
+import pytest
 
-from twitter.common.collections import maybe_list
 from twitter.common.contextutil import temporary_dir
-from twitter.common.dirutil import safe_mkdtemp, safe_rmtree
+
 from pants_test.pants_run_integration_test import PantsRunIntegrationTest
 
-from mock import MagicMock, patch
+def is_exe(name):
+  process = subprocess.Popen(['which', name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  stdout, _ = process.communicate()
+  if process.returncode == 0:
+    return True
+  return False
 
 
-@patch('sys.stdin')
 class JarPublishIntegrationTest(PantsRunIntegrationTest):
+  SCALADOC = is_exe('scaladoc')
+  JAVADOC = is_exe('javadoc')
 
-  def test_scala_publish(self, MagicMock):
-    self.publish_test('src/scala/com/pants/example/BUILD:jvm-run-example-lib',
+  @pytest.mark.skipif('not JarPublishIntegrationTest.SCALADOC', reason='No scaladoc binary on the PATH.')
+  def test_scala_publish(self):
+    self.publish_test('src/scala/com/pants/example:jvm-run-example-lib',
                       'com/pants/example/jvm-example-lib/0.0.1-SNAPSHOT',
                       ['ivy-0.0.1-SNAPSHOT.xml',
                        'jvm-example-lib-0.0.1-SNAPSHOT.jar',
@@ -27,7 +36,8 @@ class JarPublishIntegrationTest(PantsRunIntegrationTest):
                       extra_options=['--no-publish-jar_create_publish-javadoc'])
 
 
-  def test_java_publish(self, MagicMock):
+  @pytest.mark.skipif('not JarPublishIntegrationTest.JAVADOC', reason='No javadoc binary on the PATH.')
+  def test_java_publish(self):
     self.publish_test('src/java/com/pants/examples/hello/greet',
                       'com/pants/examples/hello-greet/0.0.1-SNAPSHOT/',
                       ['ivy-0.0.1-SNAPSHOT.xml',
@@ -36,21 +46,26 @@ class JarPublishIntegrationTest(PantsRunIntegrationTest):
                        'hello-greet-0.0.1-SNAPSHOT-javadoc.jar',
                        'hello-greet-0.0.1-SNAPSHOT-sources.jar'])
 
-  def publish_test(self, target, package_namepsace, artifacts=[], extra_options=None):
+  def publish_test(self, target, package_namespace, artifacts, extra_options=None,
+                   expected_primary_artifact_count=1):
+
     with temporary_dir() as publish_dir:
-      with patch('__builtin__.raw_input', return_value='Y'):
-        options =  ['--publish-local=%s' % publish_dir,
-                    '--no-publish-dryrun',
-                    '--no-publish-commit',
-                    '--publish-force',
-                    '--publish-jar_create_publish-sources']
-        if extra_options:
-          options.extend(extra_options)
-        with self.run_pants(goal='publish', targets=maybe_list(target),
-                            command_args  =options) as pants_run:
-          for file in artifacts:
-            self.assertTrue(os.path.exists(os.path.join(publish_dir,
-                                                        package_namepsace,
-                                                        file)))
-    self.assertEquals(pants_run, self.PANTS_SUCCESS_CODE)
+      options = ['--publish-local=%s' % publish_dir,
+                 '--no-publish-dryrun',
+                 '--publish-force',
+                 '--publish-jar_create_publish-sources']
+      if extra_options:
+        options.extend(extra_options)
+
+      yes = 'y' * expected_primary_artifact_count
+      pants_run = self.run_pants(['goal', 'publish', target] + options, stdin_data=yes)
+      self.assertEquals(pants_run.returncode, self.PANTS_SUCCESS_CODE,
+                        "goal publish expected success, got {0}\n"
+                        "got stderr:\n{1}\n"
+                        "got stdout:\n{2}\n".format(pants_run.returncode,
+                                                    pants_run.stderr_data,
+                                                    pants_run.stdout_data))
+      for artifact in artifacts:
+        artifact_path = os.path.join(publish_dir, package_namespace, artifact)
+        self.assertTrue(os.path.exists(artifact_path))
 

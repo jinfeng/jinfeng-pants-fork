@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -56,6 +57,8 @@ class NailgunTaskBase(TaskBase, JvmToolTaskMixin):
                                          maximum_version=maximum_version, jdk=jdk)
       except Distribution.Error as e:
         raise TaskError(e)
+
+
 
   def create_java_executor(self):
     """Create java executor that uses this task's ng daemon, if allowed.

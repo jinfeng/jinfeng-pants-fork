@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -13,13 +14,13 @@ class JavaAntlrLibrary(ExportableJvmLibrary):
   """Generates a stub Java library from Antlr grammar files."""
 
   def __init__(self,
-               name,
-               sources,
+               name=None,
+               sources=None,
                provides=None,
-               dependencies=None,
                excludes=None,
                compiler='antlr3',
-               package=None):
+               package=None,
+               **kwargs):
 
     """
     :param string name: The name of this target, which combined with this
@@ -42,15 +43,18 @@ class JavaAntlrLibrary(ExportableJvmLibrary):
         Are spread among different files, this must be set as the package cannot be inferred.
     """
 
-    ExportableJvmLibrary.__init__(self,
-                                  name,
-                                  sources,
-                                  provides,
-                                  dependencies,
-                                  excludes)
+    super(JavaAntlrLibrary, self).__init__(name=name,
+                                           sources=sources,
+                                           provides=provides,
+                                           excludes=excludes,
+                                           **kwargs)
     self.add_labels('codegen')
 
+    if not sources:
+      raise ValueError("Missing required 'sources' parameter.")
+    self.sources = sources
+
     if compiler not in ('antlr3', 'antlr4'):
-        raise ValueError("Illegal value for 'compiler': {}".format(compiler))
+      raise ValueError("Illegal value for 'compiler': {}".format(compiler))
     self.compiler = compiler
     self.package = package

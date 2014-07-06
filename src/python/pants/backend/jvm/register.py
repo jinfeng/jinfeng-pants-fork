@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -121,7 +122,10 @@ def register_goals():
       return super(AptCompile, self).select(target) and target.is_apt
 
 
-  jvm_compile = GroupTask.named('jvm-compilers', product_type='classes', flag_namespace=['compile'])
+  jvm_compile = GroupTask.named(
+    'jvm-compilers',
+    product_type=['classes_by_target', 'classes_by_source'],
+    flag_namespace=['compile'])
 
   # At some point ScalaLibrary targets will be able to won mixed scala and java source sets.
   # At that point, the ScalaCompile group member will still only select targets via
@@ -167,11 +171,17 @@ def register_goals():
   goal(name='jar', action=JarCreate, dependencies=['compile', 'resources', 'bootstrap']
   ).install('jar')
 
-  goal(name='binary', action=BinaryCreate, dependencies=['jar', 'bootstrap']
+  detect_duplicates = goal(name='dup', action=DuplicateDetector)
+
+  goal(name='binary', action=BinaryCreate, dependencies=['compile', 'resources', 'bootstrap']
   ).install().with_description('Create a jvm binary jar.')
 
-  goal(name='bundle', action=BundleCreate, dependencies=['jar', 'bootstrap', 'binary']
+  detect_duplicates.install('binary')
+
+  goal(name='bundle', action=BundleCreate, dependencies=['compile', 'resources', 'bootstrap']
   ).install().with_description('Create an application bundle from binary targets.')
+
+  detect_duplicates.install('bundle')
 
   goal(name='check_published_deps', action=CheckPublishedDeps
   ).install('check_published_deps').with_description('Find references to outdated artifacts.')
@@ -181,9 +191,6 @@ def register_goals():
 
   goal(name='publish', action=JarPublish
   ).install('publish').with_description('Publish artifacts.')
-
-  goal(name='dup',action=DuplicateDetector,
-  ).install('binary')
 
   goal(name='detect-duplicates', action=DuplicateDetector, dependencies=['jar']
   ).install().with_description('Detect duplicate classes and resources on the classpath.')
@@ -203,16 +210,16 @@ def register_goals():
   # Running.
 
   goal(name='jvm-run', action=JvmRun, dependencies=['compile', 'resources', 'bootstrap'], serialize=False
-  ).install('run').with_description('Run a (currently JVM only) binary target.')
+  ).install('run').with_description('Run a binary target.')
 
   goal(name='jvm-run-dirty', action=JvmRun, serialize=False
-  ).install('run-dirty').with_description('Run a (currently JVM only) binary target, skipping compilation.')
+  ).install('run-dirty').with_description('Run a binary target, skipping compilation.')
 
   goal(name='scala-repl', action=ScalaRepl, dependencies=['compile', 'resources', 'bootstrap'], serialize=False
-  ).install('repl').with_description('Run a (currently Scala only) REPL.')
+  ).install('repl').with_description('Run a REPL.')
 
   goal(name='scala-repl-dirty', action=ScalaRepl, serialize=False
-  ).install('repl-dirty').with_description('Run a (currently Scala only) REPL, skipping compilation.')
+  ).install('repl-dirty').with_description('Run a REPL, skipping compilation.')
 
   # IDE support.
 

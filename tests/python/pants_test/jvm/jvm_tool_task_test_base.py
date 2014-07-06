@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -9,9 +10,12 @@ import os
 
 from twitter.common.dirutil import safe_mkdir
 
+from pants.backend.android.targets.android_binary import AndroidBinary
+from pants.backend.android.targets.android_resources import AndroidResources
 from pants.backend.codegen.targets.java_antlr_library import JavaAntlrLibrary
 from pants.backend.codegen.targets.java_protobuf_library import JavaProtobufLibrary
 from pants.backend.codegen.targets.java_thrift_library import JavaThriftLibrary
+from pants.backend.codegen.targets.jaxb_library import JaxbLibrary
 from pants.backend.codegen.targets.python_antlr_library import PythonAntlrLibrary
 from pants.backend.codegen.targets.python_thrift_library import PythonThriftLibrary
 from pants.backend.core.targets.dependencies import Dependencies
@@ -39,12 +43,15 @@ class JvmToolTaskTestBase(BaseTest):
   def alias_groups(self):
     return {
       'target_aliases': {
+        'android_binary': AndroidBinary,
+        'android_resources': AndroidResources,
         'annotation_processor': AnnotationProcessor,
         'jar_library': JarLibrary,
         'java_antlr_library': JavaAntlrLibrary,
         'java_library': JavaLibrary,
         'java_protobuf_library': JavaProtobufLibrary,
         'java_thrift_library': JavaThriftLibrary,
+        'jaxb_library': JaxbLibrary,
         'junit_tests': JavaTests,
         'jvm_binary': JvmBinary,
         'page': Page,

@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -15,6 +16,7 @@ from twitter.common.contextutil import open_zip as open_jar
 from twitter.common.dirutil import safe_open
 
 from pants.backend.jvm.jvm_tool_bootstrapper import JvmToolBootstrapper
+from pants.backend.jvm.scala.target_platform import TargetPlatform
 from pants.backend.jvm.targets.jar_library import JarLibrary
 from pants.base.build_environment import get_buildroot
 from pants.base.exceptions import TaskError
@@ -42,8 +44,7 @@ class ZincUtils(object):
 
     # The target scala version.
     self._compile_bootstrap_key = 'scalac'
-    self._compile_bootstrap_tools = context.config.getlist('scala-compile', 'compile-bootstrap-tools',
-                                                     default=[':scala-compile-2.9.3'])
+    self._compile_bootstrap_tools = TargetPlatform(config=context.config).compiler_specs
     self._jvm_tool_bootstrapper.register_jvm_tool(self._compile_bootstrap_key,
                                                   self._compile_bootstrap_tools)
 

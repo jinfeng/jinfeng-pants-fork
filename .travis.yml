@@ -14,4 +14,8 @@ script: |
 notifications:
   email:
       - john.sirois@gmail.com
+      - lhosken@twitter.com
+      - zundel@squareup.com
+      - benjyw@gmail.com
+      - areitz@twitter.com
 

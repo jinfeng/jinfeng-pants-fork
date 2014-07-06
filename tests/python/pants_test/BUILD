@@ -23,8 +23,19 @@ python_library(
   name = 'int-test',
   sources = ['pants_run_integration_test.py'],
   dependencies = [
+    pants('3rdparty/python/twitter/commons:twitter.common.contextutil'),
     pants('3rdparty/python/twitter/commons:twitter.common.dirutil'),
-    pants('src/python/pants/commands:goal'),
+    pants('src/python/pants/base:build_environment'),
+  ]
+)
+
+python_tests(
+  name = 'test_binary_util',
+  sources = ['test_binary_util.py',],
+  dependencies = [
+    pants(':base_test'),
+    pants('src/python/pants:binary_util'),
+    pants('src/python/pants/base:exceptions')
   ]
 )
 
@@ -49,18 +60,33 @@ python_tests(
   ]
 )
 
-python_test_suite(
+python_tests(
+  name = 'test_utf8_header',
+  sources = ['test_utf8_header.py'],
+  dependencies = [
+    pants('3rdparty/python/twitter/commons:twitter.common.lang'),
+    pants('src/python/pants/base:build_environment'),
+    pants('src/python/pants/base:build_file_parser'),
+    pants('src/python/pants/base:dev_backend_loader'),
+  ]
+)
+
+dependencies(
   name = 'integration',
   dependencies = [
-    pants('tests/python/pants_test/tasks:jar_publish_integration'),
+    pants('tests/python/pants_test/targets:integration'),
+    pants('tests/python/pants_test/tasks:integration'),
+    pants('tests/python/pants_test/python:integration'),
   ]
 )
 
 python_test_suite(
   name = 'all',
   dependencies = [
+    pants(':test_binary_util'),
     pants(':test_maven_layout'),
     pants(':test_thrift_util'),
+    pants(':test_utf8_header'),
     pants('tests/python/example_test/hello/greet'),
     pants('tests/python/pants_test/authentication:netrc'),
     pants('tests/python/pants_test/base'),

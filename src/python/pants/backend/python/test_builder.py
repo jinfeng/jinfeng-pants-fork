@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -47,7 +48,7 @@ class PythonTestResult(object):
     return self._rc == 0
 
 
-DEFAULT_COVERAGE_CONFIG = """
+DEFAULT_COVERAGE_CONFIG = b"""
 [run]
 branch = True
 timid = True
@@ -66,7 +67,7 @@ def generate_coverage_config(targets):
   cp.add_section('html')
   if len(targets) == 1:
     target = targets[0]
-    relpath = os.path.join(os.path.dirname(target.address.buildfile.relpath), target.name)
+    relpath = os.path.join(os.path.dirname(target.address.build_file.relpath), target.name)
   else:
     relpath = Target.maybe_readable_identify(targets)
   target_dir = os.path.join(Config.load().getdefault('pants_distdir'), 'coverage', relpath)
@@ -83,7 +84,6 @@ class PythonTestBuilder(object):
     PythonRequirement('pytest'),
     PythonRequirement('pytest-timeout'),
     PythonRequirement('pytest-cov'),
-    PythonRequirement('coverage==3.6b1'),
     PythonRequirement('unittest2', version_filter=lambda py, pl: py.startswith('2')),
     PythonRequirement('unittest2py3k', version_filter=lambda py, pl: py.startswith('3'))
   ]
@@ -126,7 +126,7 @@ class PythonTestBuilder(object):
       xml_base = os.path.abspath(os.path.normpath(xml_base))
       if len(targets) == 1:
         target = targets[0]
-        relpath = os.path.join(os.path.dirname(target.address.buildfile.relpath),
+        relpath = os.path.join(os.path.dirname(target.address.build_file.relpath),
                                target.name + '.xml')
       else:
         relpath = Target.maybe_readable_identify(targets) + '.xml'
@@ -154,7 +154,7 @@ class PythonTestBuilder(object):
         return set(os.path.dirname(source).replace(os.sep, '.')
                    for source in target.sources_relative_to_source_root())
 
-    coverage_modules = set(itertools.chain([compute_coverage_modules(t) for t in targets]))
+    coverage_modules = set(itertools.chain(*[compute_coverage_modules(t) for t in targets]))
     args = ['-p', 'pytest_cov',
             '--cov-config', filename,
             '--cov-report', 'html',
@@ -171,7 +171,7 @@ class PythonTestBuilder(object):
       builder = PEXBuilder(interpreter=self.interpreter)
       builder.info.entry_point = 'pytest'
       chroot = PythonChroot(
-          targets,
+          targets=targets,
           extra_requirements=self._TESTING_TARGETS,
           builder=builder,
           platforms=('current',),

@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -14,9 +15,15 @@ from pants.base.workunit import WorkUnit
 
 class BootstrapJvmTools(Task, IvyTaskMixin):
 
+  @classmethod
+  def product_type(cls):
+    return ['jvm_build_tools_classpath_callbacks']
+
   def __init__(self, context, workdir):
     super(BootstrapJvmTools, self).__init__(context, workdir)
-    context.products.require_data('jvm_build_tools')
+
+  def prepare(self, round_manager):
+    round_manager.require_data('jvm_build_tools')
 
   def execute(self):
     context = self.context

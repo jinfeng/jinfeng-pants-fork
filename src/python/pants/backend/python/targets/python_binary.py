@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -11,7 +12,6 @@ from twitter.common.lang import Compatibility
 from twitter.common.python.pex_info import PexInfo
 
 from pants.base.build_manual import manual
-from pants.base.target import Target
 from pants.base.exceptions import TargetDefinitionException
 from pants.backend.python.targets.python_target import PythonTarget
 
@@ -37,7 +37,6 @@ class PythonBinary(PythonTarget):
                repositories=None,         # pex option
                indices=None,              # pex option
                ignore_errors=False,       # pex option
-               allow_pypi=False,          # pex option
                platforms=(),
                **kwargs):
     """
@@ -47,14 +46,18 @@ class PythonBinary(PythonTarget):
     :param dependencies: List of :class:`pants.base.target.Target` instances
       this target depends on.
     :type dependencies: list of targets
-    :param entry_point: the default entry point for this binary.  if None, drops into the entry
-      point that is defined by source
+    :param string entry_point: the default entry point for this binary.  if None, drops into the entry
+      point that is defined by source. Something like
+      "pants.bin.pants_exe:main", where "pants.bin.pants_exe" is the package
+      name and "main" is the function name (if ommitted, the module is
+      executed directly, presuming it has a ``__main.py__``).
     :param inherit_path: inherit the sys.path of the environment that this binary runs in
     :param zip_safe: whether or not this binary is safe to run in compacted (zip-file) form
     :param always_write_cache: whether or not the .deps cache of this PEX file should always
       be written to disk.
     :param repositories: a list of repositories to query for dependencies.
     :param indices: a list of indices to use for packages.
+    :param ignore_errors: should we ignore inability to resolve dependencies?
     :param platforms: extra platforms to target when building this binary.
     :param compatibility: either a string or list of strings that represents
       interpreter compatibility for this target, using the Requirement-style format,

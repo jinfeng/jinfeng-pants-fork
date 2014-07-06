@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -83,6 +84,10 @@ class JarCreate(JarTask):
                             action='callback', callback=mkflag.set_bool,
                             help='[%default] Create javadoc jars.')
 
+  @classmethod
+  def product_type(cls):
+    return ['jars', 'javadoc_jars', 'source_jars']
+
   def __init__(self, context, workdir):
     super(JarCreate, self).__init__(context, workdir)
 
@@ -93,8 +98,7 @@ class JarCreate(JarTask):
 
     self.jar_classes = options.jar_create_classes or products.isrequired('jars')
     if self.jar_classes:
-      products.require_data('classes_by_target')
-      products.require_data('resources_by_target')
+      self._jar_builder = self.prepare_jar_builder()
 
     definitely_create_javadoc = options.jar_create_javadoc or products.isrequired('javadoc_jars')
     definitely_dont_create_javadoc = options.jar_create_javadoc is False
@@ -105,13 +109,14 @@ class JarCreate(JarTask):
     self.jar_javadoc = (True if definitely_create_javadoc else
                         False if definitely_dont_create_javadoc else
                         create_javadoc)
-    if self.jar_javadoc:
-      products.require(javadoc.product_type)
-      products.require(scaladoc.product_type)
 
     self.jar_sources = products.isrequired('source_jars') or options.jar_create_sources
-
     self._jars = {}
+
+  def prepare(self, round_manager):
+    super(JarCreate, self).prepare(round_manager)
+    round_manager.require('javadoc')
+    round_manager.require('scaladoc')
 
   def execute(self):
     safe_mkdir(self.workdir)
@@ -136,10 +141,10 @@ class JarCreate(JarTask):
       if self.jar_javadoc:
         javadoc_add_genjar = functools.partial(add_genjar, 'javadoc_jars')
         self.javadocjar(jar_targets(is_java_library),
-                        self.context.products.get(javadoc.product_type),
+                        self.context.products.get('javadoc'),
                         javadoc_add_genjar)
         self.javadocjar(jar_targets(is_scala_library),
-                        self.context.products.get(scaladoc.product_type),
+                        self.context.products.get('scaladoc'),
                         javadoc_add_genjar)
 
   @contextmanager
@@ -154,31 +159,12 @@ class JarCreate(JarTask):
       yield jar
 
   def _jar(self, jvm_targets, add_genjar):
-    classes_by_target = self.context.products.get_data('classes_by_target')
-    resources_by_target = self.context.products.get_data('resources_by_target')
-
     for target in jvm_targets:
-      target_classes = classes_by_target.get(target)
-
-      target_resources = []
-      if target.has_resources:
-        target_resources.extend(resources_by_target.get(r) for r in target.resources)
-
-      if target_classes or target_resources:
-        jar_name = jarname(target)
-        add_genjar(target, jar_name)
-        jar_path = os.path.join(self.workdir, jar_name)
-        with self.create_jar(target, jar_path) as jarfile:
-          def add_to_jar(target_products):
-            if target_products:
-              for root, products in target_products.rel_paths():
-                for prod in products:
-                  jarfile.write(os.path.join(root, prod), prod)
-          add_to_jar(target_classes)
-          for resources_target in target_resources:
-            add_to_jar(resources_target)
-          if target.is_java_agent:
-            self.write_agent_manifest(target, jarfile)
+      jar_name = jarname(target)
+      jar_path = os.path.join(self.workdir, jar_name)
+      with self.create_jar(target, jar_path) as jarfile:
+        if self._jar_builder.add_target(jarfile, target):
+          add_genjar(target, jar_name)
 
   def sourcejar(self, jvm_targets, add_genjar):
     for target in jvm_targets:
@@ -211,19 +197,3 @@ class JarCreate(JarTask):
           for basedir, javadocfiles in generated.items():
             for javadocfile in javadocfiles:
               jar.write(os.path.join(basedir, javadocfile), javadocfile)
-
-  def write_agent_manifest(self, agent, jarfile):
-    # TODO(John Sirois): refactor an agent model to suport 'Boot-Class-Path' properly.
-    manifest = Manifest()
-    manifest.addentry(Manifest.MANIFEST_VERSION, '1.0')
-    if agent.premain:
-      manifest.addentry('Premain-Class', agent.premain)
-    if agent.agent_class:
-      manifest.addentry('Agent-Class', agent.agent_class)
-    if agent.can_redefine:
-      manifest.addentry('Can-Redefine-Classes', 'true')
-    if agent.can_retransform:
-      manifest.addentry('Can-Retransform-Classes', 'true')
-    if agent.can_set_native_method_prefix:
-      manifest.addentry('Can-Set-Native-Method-Prefix', 'true')
-    jarfile.writestr(Manifest.PATH, manifest.contents())

@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -18,11 +19,10 @@ from pants.backend.jvm.targets.java_library import JavaLibrary
 from pants.backend.jvm.targets.scala_library import ScalaLibrary
 from pants.backend.jvm.tasks.jvm_tool_task_mixin import JvmToolTaskMixin
 from pants.backend.jvm.tasks.nailgun_task import NailgunTask
+from pants.base.address import SyntheticAddress
 from pants.base.build_environment import get_buildroot
 from pants.base.exceptions import TaskError
-from pants.thrift_util import (
-    calculate_compile_sources,
-    calculate_compile_sources_HACK_FOR_SCROOGE_LEGACY)
+from pants.thrift_util import calculate_compile_sources
 
 
 CompilerConfig = namedtuple('CompilerConfig', ['name', 'config_section', 'profile',
@@ -52,6 +52,9 @@ class Compiler(namedtuple('CompilerConfigWithContext', ('context',) + CompilerCo
     return self.context.config.getbool(self.config_section, 'strict', default=False)
 
 
+# TODO(John Sirois): We used to support multiple incompatible scrooge compilers but no longer do.
+# As a result code in this file can be substantially simplified and made more direct.  Do so.
+# See: https://github.com/pantsbuild/pants/issues/288
 _COMPILERS = [
     CompilerConfig(name='scrooge',
                    config_section='scrooge-gen',
@@ -59,12 +62,6 @@ _COMPILERS = [
                    main='com.twitter.scrooge.Main',
                    calc_srcs=calculate_compile_sources,
                    langs=frozenset(['scala', 'java'])),
-    CompilerConfig(name='scrooge-legacy',
-                   config_section='scrooge-legacy-gen',
-                   profile='scrooge-legacy-gen',
-                   main='com.twitter.scrooge.Main',
-                   calc_srcs=calculate_compile_sources_HACK_FOR_SCROOGE_LEGACY,
-                   langs=frozenset(['scala']))
 ]
 
 _CONFIG_FOR_COMPILER = dict((compiler.name, compiler) for compiler in _COMPILERS)
@@ -151,19 +148,19 @@ class ScroogeGen(NailgunTask, JvmToolTaskMixin):
     for partial_cmd, tgts in partial_cmds.items():
       gen_files_for_source = self.gen(partial_cmd, tgts)
 
-      outdir = self._outdir(partial_cmd)
+      relative_outdir = os.path.relpath(self._outdir(partial_cmd), get_buildroot())
       langtarget_by_gentarget = {}
       for target in tgts:
         dependees = dependees_by_gentarget.get(target, [])
-        langtarget_by_gentarget[target] = self.createtarget(target, dependees, outdir,
+        langtarget_by_gentarget[target] = self.createtarget(target, dependees, relative_outdir,
                                                             gen_files_for_source)
 
       genmap = self.context.products.get(partial_cmd.language)
       for gentarget, langtarget in langtarget_by_gentarget.items():
         genmap.add(gentarget, get_buildroot(), [langtarget])
-        for dep in gentarget.internal_dependencies:
+        for dep in gentarget.dependencies:
           if self.is_gentarget(dep):
-            langtarget.update_dependencies([langtarget_by_gentarget[dep]])
+            langtarget.inject_dependency(langtarget_by_gentarget[dep].address)
 
   def gen(self, partial_cmd, targets):
     with self.invalidated(targets, invalidate_dependents=True) as invalidation_check:
@@ -229,9 +226,10 @@ class ScroogeGen(NailgunTask, JvmToolTaskMixin):
     assert self.is_gentarget(gentarget)
 
     def create_target(files, deps, target_type):
-      return self.context.add_new_target(outdir,
+      spec = '{spec_path}:{name}'.format(spec_path=outdir, name=gentarget.id)
+      address = SyntheticAddress.parse(spec=spec)
+      return self.context.add_new_target(address,
                                          target_type,
-                                         name=gentarget.id,
                                          sources=files,
                                          provides=gentarget.provides,
                                          dependencies=deps,

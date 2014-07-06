@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -226,7 +227,7 @@ def jar_coordinate(jar, rev=None):
 
 
 def target_internal_dependencies(target):
-  return filter(lambda tgt: not isinstance(tgt, Resources), target.dependencies)
+  return filter(lambda tgt: isinstance(tgt, Jarable), target.dependencies)
 
 
 class JarPublish(Task, ScmPublish):
@@ -410,7 +411,7 @@ class JarPublish(Task, ScmPublish):
           try:
             target = Target.get(address)
             if not target:
-              siblings = Target.get_all_addresses(address.buildfile)
+              siblings = Target.get_all_addresses(address.build_file)
               prompt = 'did you mean' if len(siblings) == 1 else 'maybe you meant one of these'
               raise TaskError('%s => %s?:\n    %s' % (address, prompt,
                                                       '\n    '.join(str(a) for a in siblings)))
@@ -418,7 +419,7 @@ class JarPublish(Task, ScmPublish):
               raise TaskError('%s is not an exported target' % coordinate)
             return target.provides.org, target.provides.name
           except (ImportError, SyntaxError, TypeError):
-            raise TaskError('Failed to parse %s' % address.buildfile.relpath)
+            raise TaskError('Failed to parse %s' % address.build_file.relpath)
         except IOError:
           raise TaskError('No BUILD file could be found at %s' % coordinate)
 
@@ -441,8 +442,10 @@ class JarPublish(Task, ScmPublish):
     if context.options.jar_publish_restart_at:
       self.restart_at = parse_jarcoordinate(context.options.jar_publish_restart_at)
 
-    context.products.require('jars')
-    context.products.require('source_jars')
+  def prepare(self, round_manager):
+    round_manager.require('jars')
+    round_manager.require('javadoc_jars')
+    round_manager.require('source_jars')
 
   def execute(self):
     self.check_clean_master(commit=(not self.dryrun and self.commit))

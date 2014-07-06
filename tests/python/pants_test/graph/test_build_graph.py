@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -9,7 +10,6 @@ import unittest
 from contextlib import contextmanager
 from textwrap import dedent
 
-import pytest
 from twitter.common.contextutil import pushd, temporary_dir
 from twitter.common.dirutil import touch
 
@@ -57,4 +57,4 @@ class BuildGraphTest(unittest.TestCase):
       parser.register_target_alias('fake', Target)
       build_graph = BuildGraph()
       parser.inject_spec_closure_into_build_graph(':foo', build_graph)
-      self.assertEqual(len(build_graph.dependencies_of(SyntheticAddress(':foo'))), 1)
+      self.assertEqual(len(build_graph.dependencies_of(SyntheticAddress.parse(':foo'))), 1)

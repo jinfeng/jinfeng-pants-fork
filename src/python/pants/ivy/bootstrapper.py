@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -132,6 +133,7 @@ class Bootstrapper(object):
     # https://jira.twitter.biz/browse/DPB-283
     ivy_bootstrap_dir = \
       os.path.join(self._config.getdefault('pants_bootstrapdir'), 'tools', 'jvm', 'ivy')
+    ivy_bootstrap_dir = os.path.expanduser(ivy_bootstrap_dir) # Support ~ in pants_bootstrapdir.
 
     digest = hashlib.sha1()
     if os.path.isfile(self._version_or_ivyxml):

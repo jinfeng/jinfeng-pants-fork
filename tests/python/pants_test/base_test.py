@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -5,7 +6,7 @@ from __future__ import (nested_scopes, generators, division, absolute_import, wi
                         print_function, unicode_literals)
 
 import os
-import unittest
+import unittest2
 
 from contextlib import contextmanager
 from tempfile import mkdtemp
@@ -25,7 +26,7 @@ from pants.base.target import Target
 from pants_test.base.context_utils import create_context
 
 
-class BaseTest(unittest.TestCase):
+class BaseTest(unittest2.TestCase):
   """A baseclass useful for tests requiring a temporary buildroot."""
 
   def build_path(self, relpath):
@@ -66,7 +67,7 @@ class BaseTest(unittest.TestCase):
                   dependencies=None,
                   derived_from=None,
                   **kwargs):
-    address = SyntheticAddress(spec)
+    address = SyntheticAddress.parse(spec)
     target = target_type(name=address.target_name,
                          address=address,
                          build_graph=self.build_graph,

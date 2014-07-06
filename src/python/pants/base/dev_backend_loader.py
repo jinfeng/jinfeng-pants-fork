@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -15,13 +16,13 @@ def load_backends_from_source(build_file_parser, additional_backends=None):
     the backends.
   :param additional_backends: An optional list of additional packages to load backends from.
   """
-  print("Loading pants backends from source")
   backend_packages = [
     'pants.backend.core',
     'pants.backend.python',
     'pants.backend.jvm',
     'pants.backend.codegen',
     'pants.backend.maven_layout',
+    'pants.backend.android',
   ]
   for backend_package in OrderedSet(backend_packages + (additional_backends or [])):
     module = __import__(backend_package + '.register',

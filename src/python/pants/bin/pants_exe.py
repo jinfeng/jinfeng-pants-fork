@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright 2014 Pants project contributors (see CONTRIBUTORS.md).
 # Licensed under the Apache License, Version 2.0 (see LICENSE).
 
@@ -12,7 +13,6 @@ import traceback
 import psutil
 from twitter.common.dirutil import Lock
 
-from pants.base.address import Address
 from pants.base.build_environment import get_buildroot, get_version
 from pants.base.build_file_parser import BuildFileParser
 from pants.base.build_graph import BuildGraph

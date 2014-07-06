@@ -12,15 +12,23 @@ python_test_suite(
   name = 'targets',
   dependencies = [
     pants(':artifact'),
-    pants(':bundle'),
     pants(':exclusive'),
     pants(':sort_targets'),
     pants(':jar_library'),
     pants(':java_thrift_library'),
+    pants(':jvm_app'),
     pants(':python_binary'),
     pants(':python_target'),
     pants(':scala_library'),
+    pants(':wiki_page')
   ]
+)
+
+python_test_suite(
+  name = 'integration',
+  dependencies = [
+    pants(':scala_library_integration'),
+  ],
 )
 
 python_tests(
@@ -34,12 +42,13 @@ python_tests(
 )
 
 python_tests(
-  name = 'bundle',
-  sources = ['test_bundle.py'],
+  name = 'jvm_app',
+  sources = ['test_jvm_app.py'],
   dependencies = [
     pants(':base'),
     pants('src/python/pants/backend/core'),
     pants('src/python/pants/backend/jvm/targets:jvm'),
+    pants('src/python/pants/base:exceptions'),
   ]
 )
 
@@ -110,6 +119,15 @@ python_tests(
 )
 
 python_tests(
+  name = 'scala_library_integration',
+  sources = ['test_scala_library_integration.py'],
+  dependencies = [
+    pants('tests/python/pants_test:int-test'),
+  ]
+)
+
+
+python_tests(
   name = 'python_target',
   sources = ['test_python_target.py'],
   dependencies = [
@@ -123,3 +141,12 @@ python_tests(
   ]
 )
 
+python_tests(
+  name = 'wiki_page',
+  sources = ['test_wiki_page.py'],
+  dependencies = [
+    pants('3rdparty/python/twitter/commons:twitter.common.confluence'),
+    pants('src/python/pants/backend/core/targets:common'),
+    pants('tests/python/pants_test:base_test'),
+  ]
+)
