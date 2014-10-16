@@ -10,7 +10,6 @@ import time
 
 import daemon
 
-from pants.backend.core.tasks.console_task import QuietTaskMixin
 from pants.backend.core.tasks.task import Task
 from pants.base.build_environment import get_buildroot
 from pants.base.config import Config
@@ -34,7 +33,7 @@ def _async_cautious_rmtree(root):
       _cautious_rmtree(new_path)
 
 
-class Invalidator(Task, QuietTaskMixin):
+class Invalidator(Task):
   """Invalidate the entire build."""
   def execute(self):
     build_invalidator_dir = os.path.join(
@@ -42,7 +41,7 @@ class Invalidator(Task, QuietTaskMixin):
     _cautious_rmtree(build_invalidator_dir)
 
 
-class Cleaner(Task, QuietTaskMixin):
+class Cleaner(Task):
   """Clean all current build products."""
   def execute(self):
     _cautious_rmtree(self.context.config.getdefault('pants_workdir'))
@@ -50,7 +49,7 @@ class Cleaner(Task, QuietTaskMixin):
 
 # TODO(benjy): Do we need this? It's never been that useful, because building while
 # cleaning the renamed workdir taxes the filesystem.
-class AsyncCleaner(Task, QuietTaskMixin):
+class AsyncCleaner(Task):
   """Clean all current build products in a background process."""
   def execute(self):
     _async_cautious_rmtree(self.context.config.getdefault('pants_workdir'))
