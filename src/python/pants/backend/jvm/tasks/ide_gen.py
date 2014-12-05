@@ -132,8 +132,13 @@ class IdeGen(JvmBinaryTask, JvmToolTaskMixin):
 
     self.intransitive = self.get_options().intransitive
 
-    self.checkstyle_suppression_files = self.context.config.get('checkstyle',
-      'suppression_files', type=list, default=[])
+    # TODO (Jin Feng) in OS pants, checkstyle only uses com.puppycrawl.tools.checkstyle
+    # which doesn't support multiple suppression files; plus the old setting value points
+    # to invalid file that doesn't exist anyway. So I'm commenting it out and assigning a
+    # default [] for now.
+    # self.checkstyle_suppression_files = self.context.config.get('checkstyle',
+    #  'suppression_files', type=list, default=[])
+    self.checkstyle_suppression_files = []
     # Everywhere else, debug_port is specified in the 'jvm' section. Use that as a default if none
     # is specified in the 'ide' section.
     jvm_config_debug_port = JvmDebugConfig.debug_port(self.context.config)
@@ -141,9 +146,9 @@ class IdeGen(JvmBinaryTask, JvmToolTaskMixin):
 
     self.checkstyle_bootstrap_key = 'checkstyle'
     self.register_jvm_tool_from_config(self.checkstyle_bootstrap_key, self.context.config,
-                                       ini_section='checkstyle',
-                                       ini_key='bootstrap-tools',
-                                       default=['//:twitter-checkstyle'])
+                                       ini_section='compile.checkstyle',
+                                       ini_key='bootstrap_tools',
+                                       default=['//:checkstyle'])
 
     self.scalac_bootstrap_key = None
     if not self.skip_scala:

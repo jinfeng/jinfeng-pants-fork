@@ -10,48 +10,40 @@ import os
 from pants.backend.jvm.tasks.jvm_tool_task_mixin import JvmToolTaskMixin
 from pants.backend.jvm.tasks.nailgun_task import NailgunTask
 from pants.base.exceptions import TaskError
+from pants.base.target import Target
+from pants.option.options import Options
 from pants.process.xargs import Xargs
 from pants.util.dirutil import safe_open
 
 
-CHECKSTYLE_MAIN = 'com.puppycrawl.tools.checkstyle.Main'
-
-
 class Checkstyle(NailgunTask, JvmToolTaskMixin):
+
+  _CHECKSTYLE_MAIN = 'com.puppycrawl.tools.checkstyle.Main'
 
   _CONFIG_SECTION = 'checkstyle'
 
-  @staticmethod
-  def _is_checked(target):
-    return target.is_java and not target.is_synthetic
+  _JAVA_SOURCE_EXTENSION = '.java'
+
+  _CHECKSTYLE_BOOTSTRAP_KEY = "checkstyle"
 
   @classmethod
   def register_options(cls, register):
     super(Checkstyle, cls).register_options(register)
     register('--skip', action='store_true', help='Skip checkstyle.')
     register('--configuration', help='Path to the checkstyle configuration file.')
-    register('--suppression_files', default=[],
-             help='List of checkstyle supression configuration files.')
-    register('--properties', default={},
+    register('--properties', type=Options.dict, default={},
              help='Dictionary of property mappings to use for checkstyle.properties.')
-    register('--confs', default=['default'],
-             help='One or more ivy configurations to resolve for this target. This parameter is '
-                  'not intended for general use. ')
-    register('--bootstrap-tools', default=['//:twitter-checkstyle'],
+    # QUESTION(Jin Feng) Is this --confs ever used? I can't find any Twitter internal use case
+    # in our pants.ini
+    # register('--confs', type=Options.list, default=['default'],
+    #         help='One or more ivy configurations to resolve for this target. This parameter is '
+    #              'not intended for general use. ')
+    register('--bootstrap-tools', type=Options.list, default=['//:checkstyle'],
              help='Pants targets used to bootstrap this tool.')
 
   def __init__(self, *args, **kwargs):
     super(Checkstyle, self).__init__(*args, **kwargs)
-
-    self._checkstyle_bootstrap_key = 'checkstyle'
-    self.register_jvm_tool(self._checkstyle_bootstrap_key, self.get_options().bootstrap_tools,
-                           ini_section=self.options_scope,
-                           ini_key='bootstrap-tools')
-
-    suppression_files = self.get_options().supression_files
-    self._properties = self.get_options().properties
-    self._properties['checkstyle.suppression.files'] = ','.join(suppression_files)
-    self._confs = self.context.config.getlist(self._CONFIG_SECTION, 'confs', )
+    self.register_jvm_tool(self._CHECKSTYLE_BOOTSTRAP_KEY, self.get_options().bootstrap_tools)
 
   @property
   def config_section(self):
@@ -65,6 +57,11 @@ class Checkstyle(NailgunTask, JvmToolTaskMixin):
     round_manager.require_data('ivy_jar_products')
     round_manager.require_data('exclusives_groups')
 
+  def _is_checked(self, target):
+    return isinstance(target, Target) \
+           and target.has_sources(self._JAVA_SOURCE_EXTENSION) \
+           and (not target.is_synthetic)
+
   def execute(self):
     if self.get_options().skip:
       return
@@ -73,42 +70,55 @@ class Checkstyle(NailgunTask, JvmToolTaskMixin):
       invalid_targets = []
       for vt in invalidation_check.invalid_vts:
         invalid_targets.extend(vt.targets)
+
+      self.context.log.debug("Non synthetic java targets to be checked:")
+      for target in invalid_targets:
+        self.context.log.debug('  {address_spec}'.format(address_spec=target.address.spec))
+
       sources = self.calculate_sources(invalid_targets)
+
+      self.context.log.debug('Java sources to be checked (subject to suppression rules):')
+      for source in sources:
+        self.context.log.debug('  {source}'.format(source=source))
+
       if sources:
         result = self.checkstyle(sources, invalid_targets)
         if result != 0:
-          raise TaskError('java %s ... exited non-zero (%i)' % (CHECKSTYLE_MAIN, result))
+          raise TaskError('java %s ... exited non-zero (%i)' % (self._CHECKSTYLE_MAIN, result))
 
   def calculate_sources(self, targets):
     sources = set()
     for target in targets:
       sources.update(source for source in target.sources_relative_to_buildroot()
-                     if source.endswith('.java'))
+                     if source.endswith(self._JAVA_SOURCE_EXTENSION))
     return sources
 
   def checkstyle(self, sources, targets):
-    egroups = self.context.products.get_data('exclusives_groups')
-    etag = egroups.get_group_key_for_target(targets[0])
-    classpath = self.tool_classpath(self._checkstyle_bootstrap_key)
-    cp = egroups.get_classpath_for_group(etag)
-    classpath.extend(jar for conf, jar in cp if conf in self.get_options().confs)
+    classpath = self.tool_classpath(self._CHECKSTYLE_BOOTSTRAP_KEY)
+
+    # QUESTION(Jin Feng) once again, doesn't seem to me that this is needed.
+    # Not sure who uses --confs settings.
+    # egroups = self.context.products.get_data('exclusives_groups')
+    # etag = egroups.get_group_key_for_target(targets[0])
+    # cp = egroups.get_classpath_for_group(etag)
+    # classpath.extend(jar for conf, jar in cp if conf in self.get_options().confs)
 
     args = [
       '-c', self.get_options().configuration,
       '-f', 'plain'
     ]
 
-    if self._properties:
+    if self.get_options().properties:
       properties_file = os.path.join(self.workdir, 'checkstyle.properties')
       with safe_open(properties_file, 'w') as pf:
-        for k, v in self._properties.items():
+        for k, v in self.get_options().properties.items():
           pf.write('%s=%s\n' % (k, v))
       args.extend(['-p', properties_file])
 
     # We've hit known cases of checkstyle command lines being too long for the system so we guard
     # with Xargs since checkstyle does not accept, for example, @argfile style arguments.
     def call(xargs):
-      return self.runjava(classpath=classpath, main=CHECKSTYLE_MAIN,
+      return self.runjava(classpath=classpath, main=self._CHECKSTYLE_MAIN,
                           args=args + xargs, workunit_name='checkstyle')
     checks = Xargs(call)
 
