@@ -58,9 +58,9 @@ class Checkstyle(NailgunTask, JvmToolTaskMixin):
     round_manager.require_data('exclusives_groups')
 
   def _is_checked(self, target):
-    return isinstance(target, Target) \
-           and target.has_sources(self._JAVA_SOURCE_EXTENSION) \
-           and (not target.is_synthetic)
+    return (isinstance(target, Target) and
+            target.has_sources(self._JAVA_SOURCE_EXTENSION) and
+            (not target.is_synthetic))
 
   def execute(self):
     if self.get_options().skip:
