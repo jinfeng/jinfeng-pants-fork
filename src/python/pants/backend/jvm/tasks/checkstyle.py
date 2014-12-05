@@ -96,8 +96,22 @@ class Checkstyle(NailgunTask, JvmToolTaskMixin):
   def checkstyle(self, sources, targets):
     classpath = self.tool_classpath(self._CHECKSTYLE_BOOTSTRAP_KEY)
 
-    # QUESTION(Jin Feng) once again, doesn't seem to me that this is needed.
+    # QUESTION(Jin Feng) once again, The following code doesn't seem to me that this is needed.
     # Not sure who uses --confs settings.
+    #
+    # The only case I can think is that if we, say Twitter, internally want add a checkstyle
+    # custom jar, com.twitter.common.checkstyle, and we want to live develop/debug/test the
+    # some rules in it, we can add that target as a dependency into a java target we test against.
+    #
+    # The following code, if we configure the exclusive_groups group_key properly in --confs
+    # option, then the classpath for that live com.twitter.common.checkstyle target would be added
+    # here. And invoked properly. Is my understanding correct?
+    #
+    # If correct, I felt, this hack complicates the code, and is still with limitation such as
+    # we can only do this hack in the repo where the com.twitter.common.checkstyle code lives.
+    # So instead, we should figure some other ways, such as publishing the custom checkstyle
+    # module to a local dir, and somehow wiring it up in the bootstrap_tools targets.
+    #
     # egroups = self.context.products.get_data('exclusives_groups')
     # etag = egroups.get_group_key_for_target(targets[0])
     # cp = egroups.get_classpath_for_group(etag)
