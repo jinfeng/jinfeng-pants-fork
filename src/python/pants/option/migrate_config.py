@@ -40,10 +40,6 @@ migrations = {
   ('checkstyle', 'bootstrap-tools'): ('compile.checkstyle', 'bootstrap_tools'),
   ('checkstyle', 'configuration'): ('compile.checkstyle', 'configuration'),
   ('checkstyle', 'properties'): ('compile.checkstyle', 'properties'),
-  # In OS pants, this never worked;
-  # In Twitter, we have our own ide/idea plugin, and it currently relies on
-  # DEFAULT/checkstyle_suppression_files. So comment out this automatic migration step.
-  # ('DEFAULT', 'checkstyle_suppression_files'): ('checkstyle', 'suppression_files'),
 
   ('scala-compile', 'scalac-plugins'): ('compile.scala', 'plugins'),
   ('scala-compile', 'scalac-plugin-args'): ('compile.scala', 'plugin-args'),

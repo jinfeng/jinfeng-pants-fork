@@ -33,11 +33,6 @@ class Checkstyle(NailgunTask, JvmToolTaskMixin):
     register('--configuration', help='Path to the checkstyle configuration file.')
     register('--properties', type=Options.dict, default={},
              help='Dictionary of property mappings to use for checkstyle.properties.')
-    # QUESTION(Jin Feng) Is this --confs ever used? I can't find any Twitter internal use case
-    # in our pants.ini
-    # register('--confs', type=Options.list, default=['default'],
-    #         help='One or more ivy configurations to resolve for this target. This parameter is '
-    #              'not intended for general use. ')
     register('--bootstrap-tools', type=Options.list, default=['//:checkstyle'],
              help='Pants targets used to bootstrap this tool.')
 
@@ -70,21 +65,12 @@ class Checkstyle(NailgunTask, JvmToolTaskMixin):
       invalid_targets = []
       for vt in invalidation_check.invalid_vts:
         invalid_targets.extend(vt.targets)
-
-      self.context.log.debug("Non synthetic java targets to be checked:")
-      for target in invalid_targets:
-        self.context.log.debug('  {address_spec}'.format(address_spec=target.address.spec))
-
       sources = self.calculate_sources(invalid_targets)
-
-      self.context.log.debug('Java sources to be checked (subject to suppression rules):')
-      for source in sources:
-        self.context.log.debug('  {source}'.format(source=source))
-
       if sources:
         result = self.checkstyle(sources, invalid_targets)
         if result != 0:
-          raise TaskError('java %s ... exited non-zero (%i)' % (self._CHECKSTYLE_MAIN, result))
+          raise TaskError('java {main} ... exited non-zero ({result})'.format(
+            main=self._CHECKSTYLE_MAIN, result=result))
 
   def calculate_sources(self, targets):
     sources = set()
@@ -126,7 +112,7 @@ class Checkstyle(NailgunTask, JvmToolTaskMixin):
       properties_file = os.path.join(self.workdir, 'checkstyle.properties')
       with safe_open(properties_file, 'w') as pf:
         for k, v in self.get_options().properties.items():
-          pf.write('%s=%s\n' % (k, v))
+          pf.write('{key}={value}\n'.format(key=k, value=v))
       args.extend(['-p', properties_file])
 
     # We've hit known cases of checkstyle command lines being too long for the system so we guard
