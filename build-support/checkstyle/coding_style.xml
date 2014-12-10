@@ -4,11 +4,6 @@
           "http://www.puppycrawl.com/dtds/configuration_1_3.dtd">
 
 <module name="Checker">
-  <!-- See http://checkstyle.sourceforge.net/config.html#SuppressionFilter -->
-  <module name="SuppressionFilter">
-    <property name="file" value="${checkstyle.suppression.file}"/>
-  </module>
-
   <!-- See http://checkstyle.sourceforge.net/config_whitespace.html#FileTabCharacter -->
   <module name="FileTabCharacter"/>
 
