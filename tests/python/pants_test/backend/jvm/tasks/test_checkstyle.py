@@ -5,8 +5,8 @@
 from __future__ import (nested_scopes, generators, division, absolute_import, with_statement,
                         print_function, unicode_literals)
 
-from textwrap import dedent
 import os
+from textwrap import dedent
 
 from pants.backend.jvm.tasks.checkstyle import Checkstyle
 from pants.base.address import BuildFileAddress
@@ -84,7 +84,7 @@ class CheckstyleTest(NailgunTaskTestBase):
         '''.format(suppresses_xml='\n'.join(suppresses_xml))))
 
   def _add_java_target_for_test(self, context, name, test_java_source):
-    rel_dir = os.path.join('src/java/', name)
+    rel_dir = os.path.join('src/java', name)
     self.create_file(
       relpath=os.path.join(rel_dir, '{name}.java'.format(name=name)),
       contents=test_java_source)

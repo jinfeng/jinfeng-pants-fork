@@ -12,9 +12,7 @@ from pants.goal.task_registrar import TaskRegistrar as task
 
 def register_goals():
   task(name='checkstyle', action=Checkstyle,
-       # QUESTION(Jin Feng) This was the original checkstyle task dependency. Still make sense?
-       # dependencies=['gen', 'resolve']
-       dependencies=['bootstrap']
+       dependencies=['gen', 'resolve']
   ).install('compile')
 
   task(name='scalastyle', action=Scalastyle,
