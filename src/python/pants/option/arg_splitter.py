@@ -45,6 +45,8 @@ class ArgSplitter(object):
 
   Handles help flags (-h, --help and the scope 'help') specially.
   """
+  _HELP_FLAGS = ('-h', '--help')
+
   def __init__(self, known_scopes):
     self._known_scopes = set(known_scopes + ['help'])
     self._unconsumed_args = []  # In reverse order, for efficient popping off the end.
@@ -88,9 +90,8 @@ class ArgSplitter(object):
       self._unconsumed_args.pop()
     if self._unconsumed_args and self._unconsumed_args[-1] == 'goal':
       # TODO: Temporary warning. Eventually specifying 'goal' will be an error.
-      # Turned off for now because it's annoying. Will turn back on at some point during migration.
-      #print("WARNING: Specifying the 'goal' command explicitly is superfluous and deprecated.",
-      #      file=sys.stderr)
+      print("WARNING: Specifying 'goal' explicitly is no longer necessary, and deprecated.",
+            file=sys.stderr)
       self._unconsumed_args.pop()
 
     def assign_flag_to_scope(flag, default_scope):
@@ -115,9 +116,11 @@ class ArgSplitter(object):
     while self._unconsumed_args and not self._at_double_dash():
       arg = self._unconsumed_args.pop()
       if arg.startswith(b'-'):
-        # During migration we allow flags here, and assume they are in global scope.
-        # TODO(benjy): Should we allow this even after migration?
-        assign_flag_to_scope(arg, GLOBAL_SCOPE)
+        # We assume any args here are in global scope.
+        if arg in self._HELP_FLAGS:
+          self._is_help = True
+        else:
+          assign_flag_to_scope(arg, GLOBAL_SCOPE)
       else:
         targets.append(arg)
 
@@ -154,7 +157,7 @@ class ArgSplitter(object):
     flags = []
     while self._at_flag():
       flag = self._unconsumed_args.pop()
-      if flag in ('-h', '--help'):
+      if flag in self._HELP_FLAGS:
         self._is_help = True
       else:
         flags.append(flag)
